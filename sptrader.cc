@@ -12,6 +12,10 @@ MY_NODE_MOSULE(sptrader,SpTraderLogic
 		,SPAPI_SetLoginInfo
 		,SPAPI_Login
 		,SPAPI_GetAccInfo
+		,SPAPI_LoadInstrumentList
+		,SPAPI_GetInstrumentCount
+		,SPAPI_GetInstrument
+		,SPAPI_LoadProductInfoListByCode
 		,SPAPI_GetProduct
 	      );
 

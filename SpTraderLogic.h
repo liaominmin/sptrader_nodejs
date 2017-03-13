@@ -4,6 +4,7 @@
 #include "include/ApiProxyWrapper.h"
 #include "include/ApiProxyWrapperReply.h"
 #include <v8.h>
+#include "macromagic.h"
 
 using namespace v8;
 
@@ -18,24 +19,19 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 		SpTraderLogic(void);
 		~SpTraderLogic(void);
 
-		//void setExports(const Local<Object>& exports);
-
-		EXPORT_DECLARE(on);
-		//EXPORT_DECLARE(trigger);
-
-		EXPORT_DECLARE(SPAPI_Initialize);
-		EXPORT_DECLARE(SPAPI_GetDllVersion);
-
-		EXPORT_DECLARE(SPAPI_GetLoginStatus);
-		EXPORT_DECLARE(SPAPI_SetLoginInfo);
-		EXPORT_DECLARE(SPAPI_Login);
-
-		EXPORT_DECLARE(SPAPI_GetAccInfo);
-		EXPORT_DECLARE(SPAPI_GetProduct);
-
-
-
-
+		ITR(EXPORT_DECLARE,on
+				,SPAPI_Initialize
+				,SPAPI_GetDllVersion
+				,SPAPI_GetLoginStatus
+				,SPAPI_SetLoginInfo
+				,SPAPI_Login
+				,SPAPI_GetAccInfo
+				,SPAPI_LoadInstrumentList
+				,SPAPI_GetInstrumentCount
+				,SPAPI_GetInstrument
+				,SPAPI_LoadProductInfoListByCode
+				,SPAPI_GetProduct
+		   );
 
 		//@ref ApiProxyWrapperReply
 		virtual void OnTest();

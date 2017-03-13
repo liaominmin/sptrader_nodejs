@@ -30,28 +30,12 @@ using namespace std;
 	req_data->j=$jsonData;\
 	uv_queue_work(uv_default_loop(),&(req_data->request),worker_cb,after_worker_cb); 
 
-//v8::Object* _exports;
-
-//@ref http://stackoverflow.com/questions/36320747/how-to-statically-store-and-call-a-node-js-callback-function
+//a map to store the callback.  now only on call supported ;)
 map<string, v8::Persistent<v8::Function> > _callback_map; 
-
-/*
-class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
-public:
-    virtual void* Allocate(size_t length) {
-        void* data = AllocateUninitialized(length);
-        return data == NULL ? data : memset(data, 0, length);
-    }
-    virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
-    virtual void Free(void* data, size_t) { free(data); }
-};
-static Persistent<Function> s_logCallback; 
-v8::Persistent<v8::Function> r_call;
-*/
 
 struct ShareData
 {
-    uv_work_t request;
+    uv_work_t request;//@ref uv_queue_work()
     json j;//the data to send back
     string strCallback;//the name of the callback
 };
@@ -62,9 +46,9 @@ void worker_cb(uv_work_t * req){
 }
 void after_worker_cb(uv_work_t * req,int status){
 	//cout << "after_worker_cb" << endl;
+
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 
-	// Create a stack-allocated handle scope.
 	HandleScope handle_scope(isolate);
 
 	ShareData * my_data = static_cast<ShareData *>(req->data);
@@ -73,18 +57,17 @@ void after_worker_cb(uv_work_t * req,int status){
 
 	if(!js_callback.IsEmpty()){
 		json j=my_data->j;
-		std::cout << "TODO send back to the callback with: "<< j.dump(4) << std::endl;
-		//TODO using V8 JSON then!
 		const unsigned argc = 1;
-		v8::Local<v8::Value> argv[argc] =
-		{ v8::String::NewFromUtf8(isolate, "oh todo result....") };
+		string j_s=j.dump();
+		v8::Local<v8::String> str=String::NewFromUtf8(isolate,j_s.c_str());
+		v8::Local<v8::Value> result = v8::JSON::Parse(str);
+		v8::Local<v8::Value> argv[argc] = result;
 		js_callback->Call(v8::Null(isolate), argc, argv);
 	}
 	delete my_data;//IMPORTANT
-
-	//isolate->Dispose();//NO NEED?
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void SpTraderLogic::OnTest()
 {
 	json j;
@@ -105,21 +88,6 @@ void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 	j["host_type"]=host_type;
 	j["conn_status"]=conn_status;
 	ASYNC_CALL_BACK(ConnectedReply,j);
-/*
-	cout << "On('ConnectedReply') host_type" << host_type << ",conn_status="<<conn_status <<endl;
-	switch (host_type) {
-		case 80:
-		case 81:
-			cout << "Host type :["<< host_type <<"][" << con_status << "]Transaction... Please wait!"  << endl;
-			break;
-		case 83:
-			cout << "Host type :["<< host_type <<"][" << con_status << "]Quote price port... Please wait"  << endl;
-			break;
-		case 88:
-			cout << "Host type :["<< host_type <<"][" << con_status << "]Information Link... Please wait!"  << endl;
-			break;
-	}
-*/
 }
 
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
@@ -287,7 +255,6 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 //	char* rt=(char*) (*value ? *value : "<string conversion failed>");
 //	return rt;
 //}
-
 //conert v8 string to char* (for sptrader api call)
 void V8ToCharPtr(const Local<Value>& v8v, char* rt){
 	const String::Utf8Value value(v8v);
@@ -393,48 +360,12 @@ METHOD_START(SPAPI_GetDllVersion){
 
 }METHOD_END(SPAPI_GetDllVersion)
 
-//TODO seems not working correctly, need some debugging
 METHOD_START(SPAPI_GetLoginStatus){
 
-	int host_id=-1;
-	if (args.Length()>0 && args[1]->IsNumber()){
-		Local<Number> ttt1 = Local<Number>::Cast(args[1]);
-		host_id=0+ttt1->NumberValue();
-	}else{
-		isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "2nd param should be number")));
-	}
+	HANDLE_JS_PARAM_STR(user_id,256);
+	HANDLE_JS_PARAM_INT(host_id);
 
-	rt->Set(String::NewFromUtf8(isolate,"host_id"), Integer::New(isolate,host_id));
-
-	if (args[0]->IsString()) {
-		//char *user_id=(char*)ToCString(String::Utf8Value(args[0]));
-		char user_id[256];
-		int* len=0;
-		V8ToCharPtr(args[0],user_id);
-
-		rc=apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
-
-		Local<String> ttt0 = Local<String>::Cast(args[0]);
-		//String::Utf8Value utfValue(ttt0);
-		rt->Set(String::NewFromUtf8(isolate,"user_id"), ttt0);
-
-		rt->Set(String::NewFromUtf8(isolate,"src"), String::NewFromUtf8(isolate,"SPAPI_GetLoginStatus"));
-		rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,rc));
-
-		SPApiAccInfo acc_info;
-		int rc2;
-		memset(&acc_info, 0, sizeof(SPApiAccInfo));
-		rc2 = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
-		if (rc2 == 0)
-		{
-			printf("\nAccInfo: acc_no: %s  AE:%s  BaseCcy:%s,  MarginClass:%s, NAV:%f, BuyingPower:%f, CashBal:%f, MarginCall:%f, CommodityPL:%Lf, LockupAmt:%f, Loan2MR:%f, Loan2MV:%f, AccName:%s", acc_info.ClientId, acc_info.AEId, acc_info.BaseCcy, acc_info.MarginClass,acc_info.NAV,acc_info.BuyingPower,acc_info.CashBal,acc_info.MarginCall,acc_info.CommodityPL,acc_info.LockupAmt, acc_info.LoanToMR, acc_info.LoanToMV, acc_info.AccName);
-			//string str = Big2Gb(acc_info.AccName);
-			//printf("\nAccInfo: AccName>>>Chinese simplified: %s", str.c_str());
-		}else{
-			//printf("\n SPAPI_GetAccInfo rc=%f\n",rc2);
-			cout << "SPAPI_GetAccInfo rc2=" << rc2 << endl;
-		}
-	}
+	rc=apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
 
 }METHOD_END(SPAPI_GetLoginStatus)
 
@@ -446,15 +377,25 @@ METHOD_START(SPAPI_GetAccInfo){
 	memset(&acc_info, 0, sizeof(SPApiAccInfo));
 
 	rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
+
 	if (rc == 0)
 	{
-		//TODO manipulate the return result!!! from acc_info to object acc_info
-
-		printf("\nAccInfo: acc_no: %s  AE:%s  BaseCcy:%s,  MarginClass:%s, NAV:%f, BuyingPower:%f, CashBal:%f, MarginCall:%f, CommodityPL:%Lf, LockupAmt:%f, Loan2MR:%f, Loan2MV:%f, AccName:%s", acc_info.ClientId, acc_info.AEId, acc_info.BaseCcy, acc_info.MarginClass,acc_info.NAV,acc_info.BuyingPower,acc_info.CashBal,acc_info.MarginCall,acc_info.CommodityPL,acc_info.LockupAmt, acc_info.LoanToMR, acc_info.LoanToMV, acc_info.AccName);
-
+		json j;
+		j["acc_info"]["ClientId"]=acc_info.ClientId;
+		j["acc_info"]["AEId"]=acc_info.AEId;
+		j["acc_info"]["BaseCcy"]=acc_info.BaseCcy;
+		j["acc_info"]["MarginClass"]=acc_info.MarginClass;
+		j["acc_info"]["NAV"]=acc_info.NAV;
+		j["acc_info"]["BuyingPower"]=acc_info.BuyingPower;
+		j["acc_info"]["CashBal"]=acc_info.CashBal;
+		j["acc_info"]["MarginCall"]=acc_info.MarginCall;
+		j["acc_info"]["CommodityPL"]=acc_info.CommodityPL;
+		j["acc_info"]["LockupAmt"]=acc_info.LockupAmt;
+		j["acc_info"]["LoanToMR"]=acc_info.LoanToMR;
+		j["acc_info"]["LoanToMV"]=acc_info.LoanToMV;
+		j["acc_info"]["AccName"]=acc_info.AccName;//need handle Big2Gb
 		//string str = Big2Gb(acc_info.AccName);
 		//printf("\nAccInfo: AccName>>>Chinese simplified: %s", str.c_str());
-
 	}
 
 }METHOD_END(SPAPI_GetAccInfo)
@@ -492,4 +433,51 @@ METHOD_START(SPAPI_Login){
 	rc = apiProxyWrapper.SPAPI_Login();
 
 }METHOD_END(SPAPI_Login)
+
+METHOD_START(SPAPI_LoadInstrumentList){
+	rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
+}METHOD_END(SPAPI_LoadInstrumentList)
+
+METHOD_START(SPAPI_GetInstrumentCount){
+	rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
+}METHOD_END(SPAPI_GetInstrumentCount)
+
+METHOD_START(SPAPI_LoadProductInfoListByCode){
+
+	HANDLE_JS_PARAM_STR(inst_code,64);
+	rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
+	FILL_RS_STR(inst_code)
+}METHOD_END(SPAPI_LoadProductInfoListByCode)
+
+METHOD_START(SPAPI_GetInstrument){
+	vector<SPApiInstrument> apiInstList;
+	apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
+	json j;
+	for (int i = 0; i < apiInstList.size(); i++) {
+		SPApiInstrument& inst = apiInstList[i];
+j[i]["MarketCode"]=inst.MarketCode;
+j[i]["InstName"]=inst.InstName;
+j[i]["InstName1"]=inst.InstName1;//need fix the encoding
+j[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
+j[i]["Ccy"]=inst.Ccy;
+j[i]["InstCode"]=inst.InstCode;
+j[i]["InstType"]=inst.InstType;
+/*
+double Margin;
+double ContractSize;
+STR16 MarketCode; //市场代码
+STR16 InstCode; //产品系列代码
+STR40 InstName; //英文名称
+STR40 InstName1; //繁体名称
+STR40 InstName2; //简体名称
+STR4 Ccy; //产品系列的交易币种
+char DecInPrice; //产品系列的小数位
+char InstType; //产品系列的类型
+*/
+	}
+cout << "j=" << j.dump(4) << endl;
+	printf("\n Instrument Count:%d",  apiInstList.size());
+}METHOD_END(SPAPI_GetInstrument)
+
+
 

@@ -18,10 +18,14 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 		SpTraderLogic(void);
 		~SpTraderLogic(void);
 
+		//void setExports(const Local<Object>& exports);
+
+		EXPORT_DECLARE(on);
+		//EXPORT_DECLARE(trigger);
+
 		EXPORT_DECLARE(SPAPI_Initialize);
 		EXPORT_DECLARE(SPAPI_GetDllVersion);
 
-		//TODO GetLoginStatus not working yet??
 		EXPORT_DECLARE(SPAPI_GetLoginStatus);
 		EXPORT_DECLARE(SPAPI_SetLoginInfo);
 		EXPORT_DECLARE(SPAPI_Login);
@@ -29,12 +33,11 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 		EXPORT_DECLARE(SPAPI_GetAccInfo);
 		EXPORT_DECLARE(SPAPI_GetProduct);
 
-		//the event binding on();
-		void on(const FunctionCallbackInfo<Value>& args);
 
-		//static v8::Persistent<v8::Function> OnTestCallback;//TODO
 
-//@ref ApiProxyWrapperReply
+
+
+		//@ref ApiProxyWrapperReply
 		virtual void OnTest();
 
 		virtual void OnLoginReply(long ret_code,char *ret_msg);

@@ -3,6 +3,8 @@
 
 #define EXPORT_NODE_METHOD(method) NODE_SET_METHOD(exports,#method,method);
 
+//myLogic.setExports(exports);
+
 #define MY_NODE_MOSULE($mdlname,$MyLogicClass,...)\
 	namespace $mdlname {\
 		$MyLogicClass myLogic;\

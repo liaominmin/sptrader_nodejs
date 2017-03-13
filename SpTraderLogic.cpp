@@ -6,17 +6,121 @@
 #include <stdio.h>
 #include <node.h>
 #include <v8.h>
+#include <uv.h>
+
+//https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp
+#include "json.hpp"
+// for convenience
+using json = nlohmann::json;
 
 #include <iostream>
-#include "ApiProxyWrapper.h"
+#include <map>
 
+#include "ApiProxyWrapper.h"
 ApiProxyWrapper apiProxyWrapper;
 
 using namespace v8;
 using namespace std;
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define ASYNC_CALL_BACK($callbackName,$jsonData)\
+	ShareData * req_data = new ShareData;\
+	req_data->strCallback=string(#$callbackName);\
+	req_data->request.data = req_data;\
+	req_data->j=$jsonData;\
+	uv_queue_work(uv_default_loop(),&(req_data->request),worker_cb,after_worker_cb); 
+
+//v8::Object* _exports;
+
+//@ref http://stackoverflow.com/questions/36320747/how-to-statically-store-and-call-a-node-js-callback-function
+map<string, v8::Persistent<v8::Function> > _callback_map; 
+
+/*
+class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
+public:
+    virtual void* Allocate(size_t length) {
+        void* data = AllocateUninitialized(length);
+        return data == NULL ? data : memset(data, 0, length);
+    }
+    virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
+    virtual void Free(void* data, size_t) { free(data); }
+};
+static Persistent<Function> s_logCallback; 
+v8::Persistent<v8::Function> r_call;
+*/
+
+struct ShareData
+{
+    uv_work_t request;
+    json j;//the data to send back
+    string strCallback;//the name of the callback
+};
+
+//sth related to the req->data but no isolate
+void worker_cb(uv_work_t * req){
+	//cout << "worker_cb" << endl;
+}
+void after_worker_cb(uv_work_t * req,int status){
+	//cout << "after_worker_cb" << endl;
+	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+
+	// Create a stack-allocated handle scope.
+	HandleScope handle_scope(isolate);
+
+	ShareData * my_data = static_cast<ShareData *>(req->data);
+
+	Local<Function> js_callback = Local<Function>::New(isolate,_callback_map[my_data->strCallback]);
+
+	if(!js_callback.IsEmpty()){
+		json j=my_data->j;
+		std::cout << "TODO send back to the callback with: "<< j.dump(4) << std::endl;
+		//TODO using V8 JSON then!
+		const unsigned argc = 1;
+		v8::Local<v8::Value> argv[argc] =
+		{ v8::String::NewFromUtf8(isolate, "oh todo result....") };
+		js_callback->Call(v8::Null(isolate), argc, argv);
+	}
+	delete my_data;//IMPORTANT
+
+	//isolate->Dispose();//NO NEED?
+}
+
+void SpTraderLogic::OnTest()
+{
+	json j;
+	ASYNC_CALL_BACK(LoginReply,j);
+}
+
+void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
+{
+	json j;
+	j["ret_code"]=ret_code;
+	j["ret_msg"]=string(ret_msg);
+	ASYNC_CALL_BACK(LoginReply,j);
+}
+
+void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
+{
+	json j;
+	j["host_type"]=host_type;
+	j["conn_status"]=conn_status;
+	ASYNC_CALL_BACK(ConnectedReply,j);
+/*
+	cout << "On('ConnectedReply') host_type" << host_type << ",conn_status="<<conn_status <<endl;
+	switch (host_type) {
+		case 80:
+		case 81:
+			cout << "Host type :["<< host_type <<"][" << con_status << "]Transaction... Please wait!"  << endl;
+			break;
+		case 83:
+			cout << "Host type :["<< host_type <<"][" << con_status << "]Quote price port... Please wait"  << endl;
+			break;
+		case 88:
+			cout << "Host type :["<< host_type <<"][" << con_status << "]Information Link... Please wait!"  << endl;
+			break;
+	}
+*/
+}
 
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
@@ -131,10 +235,11 @@ void SpTraderLogic::OnInstrumentListReply(bool is_ready, char *ret_msg)
 
 void SpTraderLogic::OnBusinessDateReply(long business_date)
 {
-	struct tm *tblock;
-	time_t TheTime = business_date;
-	tblock = localtime(&TheTime);
-	cout <<"OnBusinessDateReply() Business Date: "<< business_date << "[" << tblock->tm_year+1900 << "-" << tblock->tm_mon+1 << "-" << tblock->tm_mday << "]" << endl;
+	cout << "TODO OnBusinessDateReply...." << endl;
+	//struct tm *tblock;
+	//time_t TheTime = business_date;
+	//tblock = localtime(&TheTime);
+	//cout <<"OnBusinessDateReply() Business Date: "<< business_date << "[" << tblock->tm_year+1900 << "-" << tblock->tm_mon+1 << "-" << tblock->tm_mday << "]" << endl;
 }
 
 void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
@@ -183,7 +288,7 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 //	return rt;
 //}
 
-//conert from v8 string to char* (for sptrader api call)
+//conert v8 string to char* (for sptrader api call)
 void V8ToCharPtr(const Local<Value>& v8v, char* rt){
 	const String::Utf8Value value(v8v);
 	const char* rt0=(*value ? *value : "<string conversion failed>");
@@ -242,46 +347,32 @@ void V8ToCharPtr(const Local<Value>& v8v, char* rt){
 		args.GetReturnValue().Set(rt);\
 	}
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 SpTraderLogic::SpTraderLogic(void){
-	//cout << "SpTraderLogic" << endl;
 	apiProxyWrapper.SPAPI_Initialize();
 }
-
 SpTraderLogic::~SpTraderLogic(void){
-	//cout << "~SpTraderLogic" << endl;
-
-	//no need, will have seg-fault
+	//no need, will cause seg-fault
 	//apiProxyWrapper.SPAPI_Logout();
 	//apiProxyWrapper.SPAPI_Uninitialize();
 }
+//void SpTraderLogic::setExports(const Local<Object>& exports){
+//	_exports=* exports; 
+//}
 
+//store the callback (only one support now... solve in future if needed...)
 METHOD_START(on){
-	HANDLE_JS_ARGS_STR(args[0],on,16);
-	cout << "on(" << on << ")...." << endl;
-
-//https://github.com/nodejs/node/issues/1247
-	//Handle<Function> arg1 = Handle<Function>::Cast(args[1]);
-	//Persistent<Function> cb(isolate, arg1);
-	//_cb = cb;
-	//_async = new Async(&AsyncCallback);
-
-// assign callback to baton
-    //baton->callback = Persistent<Function>::New(cb);
-
-/*
-int x = *((int*)data);
-auto isolate = Isolate::GetCurrent();
-HandleScope scope(isolate);
-auto context = isolate->GetCurrentContext(); // no longer crashes
-auto global = context->Global();
-
-Local<Function> cb = Local<Function>::Cast(args[0]);
-  const unsigned argc = 1;
-  Local<Value> argv[argc] = { String::NewFromUtf8(isolate, "hello world") };
-  cb->Call(Null(isolate), argc, argv);
-Note that, in this example, the callback function is invoked synchronously.
-*/
-
+	HANDLE_JS_ARGS_STR(args[0],on,64);
+	if (args.Length() > 1 && args[1]->IsFunction() ){//IF on($eventName,$callbackFunction
+		v8::Local<v8::Function> func = v8::Local<v8::Function>::Cast(args[1]);//CASTING
+		v8::Function * ptr = *func;//IMPORTANT
+		//if(strcmp(on,"LoginReply")==0){
+		//	r_call.Reset(isolate,func);
+		//}else{
+			_callback_map[string(on)].Reset(isolate, func);//STORE
+		//}
+	}
 }METHOD_END(on)
 
 METHOD_START(SPAPI_Initialize){
@@ -402,50 +493,3 @@ METHOD_START(SPAPI_Login){
 
 }METHOD_END(SPAPI_Login)
 
-//static Persistent<Function, CopyablePersistentTraits<Function>> _cb;
-//Async* _async;
-//on('Test',function(){});
-void SpTraderLogic::OnTest()
-{
-	cout << "OnTest().........................." << endl;
-}
-
-//TODO
-//on('LoginReply',function());
-void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
-{
-	//TODO wjc: callback to the caller...
-
-	if (ret_code != 0) {
-		cout << "!!!! OnLoginReply() ErrCode = " << ret_code << endl;
-		cout << "    ErrMsg = " + string(ret_msg) << endl;
-	}
-	else 
-	{
-		cout << "OnLoginReply OK." << endl;
-		//cout << "Subscribe Price ESM6... " << endl;
-		//apiProxyWrapper.SPAPI_SubscribePrice("LIN001", "ESM6", 1);
-		//cout << "Subscribe Ticker ESM6... " << endl;
-		//apiProxyWrapper.SPAPI_SubscribeTicker("LIN001", "ESM6", 1);
-	}
-}
-
-void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
-{
-	cout << "On('ConnectedReply') host_type" << host_type << ",conn_status="<<conn_status <<endl;
-/*
-	switch (host_type) {
-		case 80:
-		case 81:
-			cout << "Host type :["<< host_type <<"][" << con_status << "]Transaction... Please wait!"  << endl;
-			break;
-		case 83:
-			cout << "Host type :["<< host_type <<"][" << con_status << "]Quote price port... Please wait"  << endl;
-			break;
-		case 88:
-			cout << "Host type :["<< host_type <<"][" << con_status << "]Information Link... Please wait!"  << endl;
-			break;
-	}
-*/
-
-}

@@ -44,3 +44,6 @@
 
 //consume macro q
 #define ITR(mmm,qqq,...) EVAL( WHILE( mmm, qqq, __VA_ARGS__ ) );
+
+// QUOTEME(sth) => "sth"
+#define QUOTEME(sth) #sth

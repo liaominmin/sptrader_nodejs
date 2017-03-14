@@ -3,7 +3,7 @@
 	{
 		'target_name':'sptrader',
 			'sources': [
-				'sptrader.cc','SpTraderLogic.cpp'
+				'sptrader.cc','SpTraderLogic.hpp'
 			],
 			"include_dirs": [
 				"include"

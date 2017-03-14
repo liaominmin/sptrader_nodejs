@@ -1,10 +1,16 @@
 #include <node.h>
 #include "macromagic.h"
-#include "macromagic_node.h"
+#include "node_addon.h"
 
-//name the nodejs addon as "sptrader" and mappto class SpTraderLogic
-#include "SpTraderLogic.h"
-MY_NODE_MOSULE(sptrader,SpTraderLogic
+//$NODE_MODULE_NAME
+#define NODE_MODULE_NAME SpTrader
+#define NODE_MODULE_LOGIC SpTraderLogic
+
+//include {$NODE_MODULE_NAME}Login.hpp
+#include LOGICFILE(NODE_MODULE_NAME)
+
+//map the "exports" => Class({$NODE_MODULE_NAME}Logic)
+MY_NODE_MODULE(NODE_MODULE_NAME,NODE_MODULE_LOGIC
 		,on
 		,SPAPI_Initialize
 		,SPAPI_GetDllVersion
@@ -19,3 +25,5 @@ MY_NODE_MOSULE(sptrader,SpTraderLogic
 		,SPAPI_GetProduct
 	      );
 
+//cleanup
+#undef NODE_MODULE_NAME

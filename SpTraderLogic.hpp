@@ -10,6 +10,8 @@ using namespace v8;
 
 #define EXPORT_DECLARE(fff) void fff(const FunctionCallbackInfo<Value>& args);
 
+//typedef void(SpTraderLogic::*PMA)(const FunctionCallbackInfo<Value>& args);
+
 class SpTraderLogic :  public ApiProxyWrapperReply
 {
 	private:
@@ -19,19 +21,8 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 		SpTraderLogic(void);
 		~SpTraderLogic(void);
 
-		ITR(EXPORT_DECLARE,on
-				,SPAPI_Initialize
-				,SPAPI_GetDllVersion
-				,SPAPI_GetLoginStatus
-				,SPAPI_SetLoginInfo
-				,SPAPI_Login
-				,SPAPI_GetAccInfo
-				,SPAPI_LoadInstrumentList
-				,SPAPI_GetInstrumentCount
-				,SPAPI_GetInstrument
-				,SPAPI_LoadProductInfoListByCode
-				,SPAPI_GetProduct
-		   );
+		//define the module methods
+		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));
 
 		//@ref ApiProxyWrapperReply
 		virtual void OnTest();
@@ -86,6 +77,8 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 
 
 #endif
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //#include "SpTraderLogic.h"
 
 #include <unistd.h>
@@ -104,13 +97,12 @@ using json = nlohmann::json;
 #include <iostream>
 #include <map>
 
-#include "ApiProxyWrapper.h"
-ApiProxyWrapper apiProxyWrapper;
+//#include "ApiProxyWrapper.h"
+//ApiProxyWrapper apiProxyWrapper;
 
 using namespace v8;
 using namespace std;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define ASYNC_CALL_BACK($callbackName,$jsonData)\
 	ShareData * req_data = new ShareData;\
 	req_data->strCallback=string(#$callbackName);\
@@ -429,6 +421,15 @@ METHOD_START(on){
 		//}
 	}
 }METHOD_END(on)
+
+/*
+void SpTraderLogic::call(const FunctionCallbackInfo<Value>& args) {
+	Local<String> in_api = Local<String>::Cast(args[0]);
+	char api[64];
+	V8ToCharPtr(in_api,api);
+	//cout << "call(" << api << ")" << endl;
+}
+*/
 
 METHOD_START(SPAPI_Initialize){
 

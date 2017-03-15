@@ -9,4 +9,4 @@ sh -c "node-gyp build 2>&1" > ../tmp/log_build.log
 cat ../tmp/log_build.log |grep error
 #node-gyp build 
 
-ls -al build/Release/sptrader.node
+ls -al build/Release/SpTrader.node

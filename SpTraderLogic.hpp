@@ -86,7 +86,7 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 
 
 #endif
-#include "SpTraderLogic.h"
+//#include "SpTraderLogic.h"
 
 #include <unistd.h>
 #include <ctype.h>

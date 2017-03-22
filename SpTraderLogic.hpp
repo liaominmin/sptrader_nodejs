@@ -141,7 +141,9 @@ void after_worker_cb(uv_work_t * req,int status){
 		string j_s=j.dump();
 		v8::Local<v8::String> str=String::NewFromUtf8(isolate,j_s.c_str());
 		v8::Local<v8::Value> result = v8::JSON::Parse(str);
-		v8::Local<v8::Value> argv[argc] = result;
+		v8::Local<v8::Value> argv[argc];
+		//argv[argc] = result;
+		argv[0] = result;
 		js_callback->Call(v8::Null(isolate), argc, argv);
 	}
 	delete my_data;//IMPORTANT

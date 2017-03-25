@@ -20,8 +20,9 @@ sptrader nodejs wrapper
 
 # todo list
 
-```
-```
+* some examples
+* extends some strategy
+* try learn IB or other ex market
 
 # TODO
 

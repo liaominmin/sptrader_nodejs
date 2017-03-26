@@ -41,12 +41,13 @@ http://www.sharppoint.com.hk/algo.php?lang=1&mod=api
 
 
 ```
+export NODE_VERSION=node-v7.7.4
 cd ~
-#wget https://nodejs.org/dist/v6.10.0/node-v6.10.1.tar.gz
-wget http://npm.taobao.org/mirrors/node/v6.10.1/node-v6.10.1.tar.gz
-tar xzvf node-v6.10.1.tar.gz
-cd node-v6.10.1
-./configure --prefix=home/$USER/node-v6.10.1 --shared-openssl
+#wget https://nodejs.org/dist/latest/$NODE_VERSION.tar.gz
+wget http://npm.taobao.org/mirrors/node/latest/$NODE_VERSION.tar.gz
+tar xzvf $NODE_VERSION.tar.gz
+cd $NODE_VERSION
+./configure --prefix=/$HOME/$NODE_VERSION --shared-openssl
 make && make install
 
 # need libssl (as shared lib to run libapiwrapper)

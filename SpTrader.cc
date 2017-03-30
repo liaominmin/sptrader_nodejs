@@ -1,7 +1,7 @@
 #include <node.h>
 #include "macromagic.h"
 
-//def NODE_MODULE_NAME for node_addon.h:
+//define NODE_MODULE_NAME for node_addon.h:
 #define NODE_MODULE_NAME SpTrader
 #define NODE_MODULE_FUNC_LIST \
 	on\
@@ -19,6 +19,6 @@
 
 #include "node_addon.h"
 
-//always cleanup
+//cleanup:
 #undef NODE_MODULE_FUNC_LIST
 #undef NODE_MODULE_NAME

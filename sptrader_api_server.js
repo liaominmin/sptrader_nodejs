@@ -30,7 +30,6 @@ var argo=argv2o(process.argv);
 logger.log(argo);
 
 var http_server=require('http').createServer(
-	//require("./sptrader_api_server_logic.js")({})
 	require(argo.logic||"./sptrader_api_server_logic.js")({argo,sptrader})
 ).listen(ppp=argo.port||argo.p||4321,hhh=argo.host||argo.h||'0.0.0.0',()=>{
 	logger.log(hhh+':'+ppp);

@@ -1,3 +1,5 @@
+//本地sptrader替身，用来简化、优化远程呼叫:
+
 const o2s=function(o){try{return JSON.stringify(o);}catch(ex){}};
 const s2o=function(s){try{return(new Function('return '+s))()}catch(ex){}};
 const Q=require('q');//important..
@@ -52,7 +54,7 @@ module.exports = function(opts){
 					dfr.resolve(s2o(s));
 				});
 			}).on('error',err=>{
-				logger.log(`problem with request: ${e.message}`);
+				logger.log(`problem with request: ${err.message}`);
 				dfr.resolve({STS:"KO",errmsg:""+err});
 			});
 			req.write(postData);

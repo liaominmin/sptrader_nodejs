@@ -2,6 +2,7 @@ const o2s=function(o){try{return JSON.stringify(o);}catch(ex){}};
 const s2o=function(s){try{return(new Function('return '+s))()}catch(ex){}};
 const Q=require('q');//important..
 const web=require("http");//TODO https later
+var logger=console;
 
 const StreamToString=(stream, callback)=>{
 	var str = '';

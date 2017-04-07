@@ -193,7 +193,7 @@ void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *or
 	j["err_code"]=err_code;
 	j["err_msg"]=err_msg;
 
-	ASYNC_CALL_BACK(ApiOrderRequestFailed,j);
+	ASYNC_CALL_BACK(OrderRequestFailed,j);
 }
 
 //4
@@ -209,7 +209,7 @@ void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 	j["order"]["ClOrderId"]=string(order->ClOrderId);
 	//j["order"]["IntOrderNo"]=order->IntOrderNo;
 
-	ASYNC_CALL_BACK(ApiOrderBeforeSendReport,j);
+	ASYNC_CALL_BACK(OrderBeforeSendReport,j);
 }
 
 //5 SPAPI_RegisterMMOrderRequestFailed
@@ -220,7 +220,7 @@ void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_c
 	j["mm_order"]["ClOrderId"]=mm_order->ClOrderId;
 	j["err_code"]=err_code;
 	j["err_msg"]=err_msg;
-	ASYNC_CALL_BACK(ApiMMOrderRequestFailed,j);
+	ASYNC_CALL_BACK(MMOrderRequestFailed,j);
 }
 
 //6
@@ -237,7 +237,7 @@ void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 	j["mm_order"]["BidExtOrderNo"]=mm_order->BidExtOrderNo;
 	j["mm_order"]["BidQty"]=mm_order->BidQty;
 
-	ASYNC_CALL_BACK(ApiMMOrderBeforeSendReport,j);
+	ASYNC_CALL_BACK(MMOrderBeforeSendReport,j);
 }
 
 
@@ -252,7 +252,7 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 	j["product_code"]=product_code;
 	j["buy_sell"]=buy_sell;
 	j["qty"]=qty;
-	ASYNC_CALL_BACK(ApiQuoteRequestReceived,j);
+	ASYNC_CALL_BACK(QuoteRequestReceived,j);
 }
 
 //8
@@ -279,7 +279,7 @@ void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 	j["tblock"]["tm_min"]=tblock->tm_min;
 	j["tblock"]["tm_sec"]=tblock->tm_sec;
 
-	ASYNC_CALL_BACK(ApiTradeReport,j);
+	ASYNC_CALL_BACK(TradeReport,j);
 }
 
 //9
@@ -305,7 +305,7 @@ void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade
 	j["tblock"]["tm_min"]=tblock->tm_min;
 	j["tblock"]["tm_sec"]=tblock->tm_sec;
 
-	ASYNC_CALL_BACK(ApiLoadTradeReadyPush,j);
+	ASYNC_CALL_BACK(LoadTradeReadyPush,j);
 }
 
 //10
@@ -333,7 +333,7 @@ void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
 	j["tblock"]["tm_min"]=tblock->tm_min;
 	j["tblock"]["tm_sec"]=tblock->tm_sec;
 
-	ASYNC_CALL_BACK(ApiTradeReport,j);
+	ASYNC_CALL_BACK(PriceReport,j);
 }
 
 //11
@@ -352,7 +352,7 @@ void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
 	j["tblock"]["tm_min"]=tblock->tm_min;
 	j["tblock"]["tm_sec"]=tblock->tm_sec;
 
-	ASYNC_CALL_BACK(ApiTickerUpdate,j);
+	ASYNC_CALL_BACK(TickerUpdate,j);
 }
 
 //12
@@ -372,7 +372,7 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 	j["order"]["ClOrderId"]=string(order->ClOrderId);
 	//j["order"]["IntOrderNo"]=order->IntOrderNo;
 
-	ASYNC_CALL_BACK(ApiOrderReport,j);
+	ASYNC_CALL_BACK(OrderReport,j);
 }
 
 //13
@@ -541,7 +541,7 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 	json j;
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=string(ret_msg);
-	ASYNC_CALL_BACK(ApiAccountControlReply,j);
+	ASYNC_CALL_BACK(AccountControlReply,j);
 }
 
 

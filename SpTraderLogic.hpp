@@ -75,19 +75,19 @@ using namespace std;
 //macro ASYNC_CALL_BACK that will call callback (if any) with result json data
 #define ASYNC_CALL_BACK($callbackName,$jsonData)\
 	ShareData * req_data = new ShareData;\
-	req_data->strCallback=string(#$callbackName);\
-	req_data->request.data = req_data;\
-	req_data->j=$jsonData;\
-	uv_queue_work(uv_default_loop(),&(req_data->request),worker_cb,after_worker_cb); 
+req_data->strCallback=string(#$callbackName);\
+req_data->request.data = req_data;\
+req_data->j=$jsonData;\
+uv_queue_work(uv_default_loop(),&(req_data->request),worker_cb,after_worker_cb); 
 
 //a map to store the callback.  now only on call supported ;)
 map<string, v8::Persistent<v8::Function> > _callback_map; 
 
 struct ShareData
 {
-    uv_work_t request;//@ref uv_queue_work()
-    json j;//the data to send back
-    string strCallback;//the name of the callback
+	uv_work_t request;//@ref uv_queue_work()
+	json j;//the data to send back
+	string strCallback;//the name of the callback
 };
 
 //sth related to the req->data but no isolate
@@ -132,12 +132,14 @@ void after_worker_cb(uv_work_t * req,int status){
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//0
 void SpTraderLogic::OnTest()
 {
 	json j;
 	ASYNC_CALL_BACK(LoginReply,j);
 }
 
+//1
 void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 {
 	json j;
@@ -145,18 +147,16 @@ void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALL_BACK(LoginReply,j);
 }
-
-void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
+//2
+void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 {
+	cout <<"Psw Change Reply:"<< ret_code << '\t' + string(ret_msg) << endl;
 	json j;
-
-	j["host_type"]=host_type;
-	j["conn_status"]=conn_status;
-
-	ASYNC_CALL_BACK(ConnectedReply,j);
+	j["ret_code"]=ret_code;
+	j["ret_msg"]=ret_msg;
+	ASYNC_CALL_BACK(ApiTickerUpdate,j);
 }
-
-//for 1.3 SPAPI_RegisterOrderRequestFailed
+//3
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
 	cout << "Order Request Failed: Order#"  << order->IntOrderNo << " [" << err_code << " (" +string(err_msg) << ")], Action=" << action << " ClorderId=" +string(order->ClOrderId) << endl;
@@ -172,6 +172,168 @@ void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *or
 	ASYNC_CALL_BACK(ApiOrderRequestFailed,j);
 }
 
+//4
+void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
+{
+	//reuse OnApiOrderReport()
+	//OnApiOrderReport(0, order);
+	json j;
+
+	j["rec_no"]=0;
+	j["order"]["Price"]=order->Price;
+	j["order"]["Qty"]=order->Qty;
+	j["order"]["TradedQty"]=order->TradedQty;
+	j["order"]["TotalQty"]=order->TotalQty;
+	j["order"]["ClOrderId"]=string(order->ClOrderId);
+	//j["order"]["IntOrderNo"]=order->IntOrderNo;
+
+	ASYNC_CALL_BACK(ApiOrderBeforeSendReport,j);
+}
+
+//5 SPAPI_RegisterMMOrderRequestFailed
+void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
+{
+	printf("\nMM Order Request Failed:Order#%ld [%ld (%s)], ClorderId=%s",mm_order->AccNo ,err_code, err_msg, mm_order->ClOrderId);
+	json j;
+	j["mm_order"]["ClOrderId"]=mm_order->ClOrderId;
+	j["err_code"]=err_code;
+	j["err_msg"]=err_msg;
+	ASYNC_CALL_BACK(ApiMMOrderRequestFailed,j);
+}
+
+//6
+void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
+{
+	printf("\nMM Order BeforeSend Report [acc_no:%s]:\nAskAccOrderNo:%ld , AskExtOrderNo#%lld , AskQty=%ld\nBidAccOrderNo:%ld , BidExtOrderNo#%lld, BidQty=%ld\n", mm_order->AccNo,
+			mm_order->AskAccOrderNo, mm_order->AskExtOrderNo , mm_order->AskQty, mm_order->BidAccOrderNo, mm_order->BidExtOrderNo,  mm_order->BidQty);
+	json j;
+	j["mm_order"]["AccNo"]=mm_order->AccNo;
+	j["mm_order"]["AskAccOrderNo"]=mm_order->AskAccOrderNo;
+	j["mm_order"]["AskExtOrderNo"]=mm_order->AskExtOrderNo;
+	j["mm_order"]["AskQty"]=mm_order->AskQty;
+	j["mm_order"]["BidAccOrderNo"]=mm_order->BidAccOrderNo;
+	j["mm_order"]["BidExtOrderNo"]=mm_order->BidExtOrderNo;
+	j["mm_order"]["BidQty"]=mm_order->BidQty;
+
+	ASYNC_CALL_BACK(ApiMMOrderBeforeSendReport,j);
+}
+
+
+//7.SPAPI_RegisterQuoteRequestReceivedReport
+void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
+{
+	cout <<"Quote Request: ProductCode:"+ string(product_code) << "  b_s:"<< buy_sell << " qty="<< qty << endl;
+	//(buy_sell == 0)  strcpy(bs, "Both");
+	//(buy_sell == 'B')strcpy(bs, "Buy");
+	//(buy_sell == 'S')strcpy(bs, "Sell");
+	json j;
+	j["product_code"]=product_code;
+	j["buy_sell"]=buy_sell;
+	j["qty"]=qty;
+	ASYNC_CALL_BACK(ApiQuoteRequestReceived,j);
+}
+
+//8
+void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
+{
+	struct tm *tblock;
+
+	time_t TheTime = trade->TradeTime;   
+	tblock = localtime(&TheTime);
+	//wjc.tmp
+	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
+	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
+	cout <<" trade_qty=" << trade->Qty << endl;
+	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;
+
+	json j;
+
+	j["trade"]["IntOrderNo"]=trade->IntOrderNo;
+	j["trade"]["TradeNo"]=trade->TradeNo;
+	j["trade"]["Price"]=trade->Price;
+	j["trade"]["AvgTradedPrice"]=trade->AvgTradedPrice;
+	j["trade"]["Qty"]=trade->Qty;
+	j["tblock"]["tm_hour"]=tblock->tm_hour;
+	j["tblock"]["tm_min"]=tblock->tm_min;
+	j["tblock"]["tm_sec"]=tblock->tm_sec;
+
+	ASYNC_CALL_BACK(ApiTradeReport,j);
+}
+
+//9
+void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
+{
+	struct tm *tblock;
+
+	time_t TheTime = trade->TradeTime;   
+	tblock = localtime(&TheTime);
+	//wjc
+	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
+	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
+	cout <<" trade_qty=" << trade->Qty << endl;
+	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;   
+
+	json j;
+	j["trade"]["IntOrderNo"]=trade->IntOrderNo;
+	j["trade"]["TradeNo"]=trade->TradeNo;
+	j["trade"]["Price"]=trade->Price;
+	j["trade"]["AvgTradedPrice"]=trade->AvgTradedPrice;
+	j["trade"]["Qty"]=trade->Qty;
+	j["tblock"]["tm_hour"]=tblock->tm_hour;
+	j["tblock"]["tm_min"]=tblock->tm_min;
+	j["tblock"]["tm_sec"]=tblock->tm_sec;
+
+	ASYNC_CALL_BACK(ApiLoadTradeReadyPush,j);
+}
+
+//10
+void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
+{
+	struct tm *tblock;
+
+	if (price == NULL)return;
+	/*string bidQ = CommonUtils::GetBigQtyStr(price->BidQty[0], true);
+		string bidPrice = CommonUtils::BidAskPriceStr(price->Bid[0], price->DecInPrice);
+		string askPrice = CommonUtils::BidAskPriceStr(price->Ask[0], price->DecInPrice);
+		string askQ = CommonUtils::GetBigQtyStr(price->AskQty[0], true);*/
+	time_t TheTime = price->Timestamp;
+	tblock = localtime(&TheTime);
+	cout <<"Price:"+ string(price->ProdCode)<< '\t' << price->BidQty[0] << '\t' << price->Bid[0] << '\t' << price->Ask[0] << '\t' << price->AskQty[0]<< '\t' << price->Timestamp<< "["<< tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec << "]" << endl;
+	json j;
+
+	j["price"]["ProdCode"]=string(price->ProdCode);
+	j["price"]["BidQty0"]=price->BidQty[0];
+	j["price"]["Bid0"]=price->Bid[0];
+	j["price"]["Ask0"]=price->Ask[0];
+	j["price"]["AskQty0"]=price->AskQty[0];
+	j["price"]["Timestamp"]=price->Timestamp;
+	j["tblock"]["tm_hour"]=tblock->tm_hour;
+	j["tblock"]["tm_min"]=tblock->tm_min;
+	j["tblock"]["tm_sec"]=tblock->tm_sec;
+
+	ASYNC_CALL_BACK(ApiTradeReport,j);
+}
+
+//11
+void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
+{
+	struct tm *tblock;
+	time_t TheTime = ticker->TickerTime;
+	tblock = localtime(&TheTime);
+	cout <<"Ticker:"+ string(ticker->ProdCode)<< '\t' << ticker->Price << '\t' << ticker->Qty << '\t' << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec << endl;
+
+	json j;
+	j["ticker"]["ProdCode"]=ticker->ProdCode;
+	j["ticker"]["Price"]=ticker->Price;
+	j["ticker"]["Qty"]=ticker->Qty;
+	j["tblock"]["tm_hour"]=tblock->tm_hour;
+	j["tblock"]["tm_min"]=tblock->tm_min;
+	j["tblock"]["tm_sec"]=tblock->tm_sec;
+
+	ASYNC_CALL_BACK(ApiTickerUpdate,j);
+}
+
+//12
 void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 {
 	//cout << "Order Report [acc_no:" +string(order->AccNo) << "] Status=" << string(OutputOrderStatus(order->Status)) << " Order#" << order->IntOrderNo << " ProdCode="+string(order->ProdCode);
@@ -191,117 +353,17 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 	ASYNC_CALL_BACK(ApiOrderReport,j);
 }
 
-void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
-{
-//reuse OnApiOrderReport()
-//OnApiOrderReport(0, order);
-	json j;
-
-	j["rec_no"]=0;
-	j["order"]["Price"]=order->Price;
-	j["order"]["Qty"]=order->Qty;
-	j["order"]["TradedQty"]=order->TradedQty;
-	j["order"]["TotalQty"]=order->TotalQty;
-	j["order"]["ClOrderId"]=string(order->ClOrderId);
-	//j["order"]["IntOrderNo"]=order->IntOrderNo;
-
-	ASYNC_CALL_BACK(ApiOrderBeforeSendReport,j);
-}
-
-void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
-{
-	cout << "Account Login Reply: acc_no="+ string(accNo) << " ret_code="<< ret_code << " ret_msg="+ string(ret_msg)  << endl;
-}
-
-
-void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
-{
-	cout << "Account Logout Reply:  ret_code="<< ret_code << " ret_msg="+ string(ret_msg)  << endl;
-}
-
-void SpTraderLogic::OnAccountInfoPush(const SPApiAccInfo *acc_info)
-{
-	cout <<"AccInfo: acc_no="+ string(acc_info->ClientId)<< " AE="+ string(acc_info->AEId)<< " BaseCcy="+ string(acc_info->BaseCcy) << endl;
-}
-
-void SpTraderLogic::OnAccountPositionPush(const SPApiPos *pos)
-{
-	int p_qty;
-	if (pos->LongShort == 'B') p_qty = pos->Qty;
-	else p_qty = -1 *pos->Qty;
-	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
-	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
-	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
-	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;
-}
-
-void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
-{
-	int p_qty;
-	if (pos->LongShort == 'B') p_qty = pos->Qty;
-	else p_qty = -1 *pos->Qty;
-	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
-	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
-	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
-	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;    
-}
-
-void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
-{
-	cout <<"AccBal: Ccy=" +string(acc_bal->Ccy) << " CashBf=" << acc_bal->CashBf << " NotYetValue=" << acc_bal->NotYetValue << " TodayCash=" << acc_bal->TodayCash;
-	cout <<" TodayOut=" << acc_bal->TodayOut << " Unpresented=" << acc_bal->Unpresented << endl;
-}
-
-void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
-{
-	struct tm *tblock;
-
-	time_t TheTime = trade->TradeTime;   
-	tblock = localtime(&TheTime);
-//wjc.tmp
-	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
-	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
-	cout <<" trade_qty=" << trade->Qty << endl;
-	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;
-}
-
-void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
-{
-	struct tm *tblock;
-
-	if (price == NULL)return;
-	/*string bidQ = CommonUtils::GetBigQtyStr(price->BidQty[0], true);
-	  string bidPrice = CommonUtils::BidAskPriceStr(price->Bid[0], price->DecInPrice);
-	  string askPrice = CommonUtils::BidAskPriceStr(price->Ask[0], price->DecInPrice);
-	  string askQ = CommonUtils::GetBigQtyStr(price->AskQty[0], true);*/
-	time_t TheTime = price->Timestamp;
-	tblock = localtime(&TheTime);
-	cout <<"Price:"+ string(price->ProdCode)<< '\t' << price->BidQty[0] << '\t' << price->Bid[0] << '\t' << price->Ask[0] << '\t' << price->AskQty[0]<< '\t' << price->Timestamp<< "["<< tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec << "]" << endl;
-}
-
-void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
-{
-	struct tm *tblock;
-	time_t TheTime = ticker->TickerTime;
-	tblock = localtime(&TheTime);
-	cout <<"Ticker:"+ string(ticker->ProdCode)<< '\t' << ticker->Price << '\t' << ticker->Qty << '\t' << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec << endl;
-}
-
-void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
-{
-	cout <<"Psw Change Reply:"<< ret_code << '\t' + string(ret_msg) << endl;
-}
-
-void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
-{
-	printf("\nProductListByCodeReply(inst code:%s):%s. Ret Msg:%s\n", inst_code, is_ready?"Ok":"No", ret_msg);
-}
-
+//13
 void SpTraderLogic::OnInstrumentListReply(bool is_ready, char *ret_msg)
 {
 	printf("\nInstrument Ready:%s. Ret Msg:%s\n",is_ready?"Ok":"No", ret_msg);
+	json j;
+	j["is_ready"]=is_ready;
+	j["ret_msg"]=ret_msg;
+	ASYNC_CALL_BACK(InstrumentListReply,j);
 }
 
+//14
 void SpTraderLogic::OnBusinessDateReply(long business_date)
 {
 	cout << "TODO OnBusinessDateReply...." << endl;
@@ -309,46 +371,160 @@ void SpTraderLogic::OnBusinessDateReply(long business_date)
 	//time_t TheTime = business_date;
 	//tblock = localtime(&TheTime);
 	//cout <<"OnBusinessDateReply() Business Date: "<< business_date << "[" << tblock->tm_year+1900 << "-" << tblock->tm_mon+1 << "-" << tblock->tm_mday << "]" << endl;
+	json j;
+	j["business_date"]=business_date;
+	ASYNC_CALL_BACK(BusinessDateReply,j);
 }
 
+//15
+void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
+{
+	json j;
+
+	j["host_type"]=host_type;
+	j["conn_status"]=conn_status;
+
+	ASYNC_CALL_BACK(ConnectedReply,j);
+}
+
+
+//16
+void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
+{
+	cout << "Account Login Reply: acc_no="+ string(accNo) << " ret_code="<< ret_code << " ret_msg="+ string(ret_msg)  << endl;
+	json j;
+
+	j["accNo"]=accNo;
+	j["ret_code"]=ret_code;
+	j["ret_msg"]=ret_msg;
+
+	ASYNC_CALL_BACK(AccountLoginReply,j);
+}
+
+//17
+void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
+{
+	cout << "Account Logout Reply:  ret_code="<< ret_code << " ret_msg="+ string(ret_msg)  << endl;
+	json j;
+
+	j["ret_code"]=ret_code;
+	j["ret_msg"]=ret_msg;
+
+	ASYNC_CALL_BACK(AccountLogoutReply,j);
+}
+
+//18
+void SpTraderLogic::OnAccountInfoPush(const SPApiAccInfo *acc_info)
+{
+	cout <<"AccInfo: acc_no="+ string(acc_info->ClientId)<< " AE="+ string(acc_info->AEId)<< " BaseCcy="+ string(acc_info->BaseCcy) << endl;
+	json j;
+
+	j["acc_info"]["ClientId"]=string(acc_info->ClientId);
+	j["acc_info"]["AEId"]=string(acc_info->AEId);
+	j["acc_info"]["BaseCcy"]=string(acc_info->BaseCcy);
+
+	ASYNC_CALL_BACK(AccountInfoPush,j);
+}
+
+//19
+void SpTraderLogic::OnAccountPositionPush(const SPApiPos *pos)
+{
+	int p_qty;
+	if (pos->LongShort == 'B') p_qty = pos->Qty;
+	else p_qty = -1 *pos->Qty;
+
+	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
+	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
+	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
+	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;
+
+	json j;
+	j["p_qty"]=p_qty;
+	j["pos"]["TotalAmt"]=pos->TotalAmt;
+	j["pos"]["LongQty"]=pos->LongQty;
+	j["pos"]["LongTotalAmt"]=pos->LongTotalAmt;
+	j["pos"]["ShortQty"]=pos->ShortQty;
+	j["pos"]["ShortTotalAmt"]=pos->ShortTotalAmt;
+	j["pos"]["PLBaseCcy"]=pos->PLBaseCcy;
+	j["pos"]["PL"]=pos->PL;
+	j["pos"]["ExchangeRate"]=pos->ExchangeRate;
+
+	ASYNC_CALL_BACK(AccountPositionPush,j);
+}
+
+//20
+void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
+{
+	int p_qty;
+	if (pos->LongShort == 'B') p_qty = pos->Qty;
+	else p_qty = -1 *pos->Qty;
+
+	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
+	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
+	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
+	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;    
+
+	json j;
+	j["p_qty"]=p_qty;
+	j["pos"]["TotalAmt"]=pos->TotalAmt;
+	j["pos"]["LongQty"]=pos->LongQty;
+	j["pos"]["LongTotalAmt"]=pos->LongTotalAmt;
+	j["pos"]["ShortQty"]=pos->ShortQty;
+	j["pos"]["ShortTotalAmt"]=pos->ShortTotalAmt;
+	j["pos"]["PLBaseCcy"]=pos->PLBaseCcy;
+	j["pos"]["PL"]=pos->PL;
+	j["pos"]["ExchangeRate"]=pos->ExchangeRate;
+
+	ASYNC_CALL_BACK(UpdatedAccountPositionPush,j);
+}
+
+//21
+void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
+{
+	cout <<"AccBal: Ccy=" +string(acc_bal->Ccy) << " CashBf=" << acc_bal->CashBf << " NotYetValue=" << acc_bal->NotYetValue << " TodayCash=" << acc_bal->TodayCash;
+	cout <<" TodayOut=" << acc_bal->TodayOut << " Unpresented=" << acc_bal->Unpresented << endl;
+
+	json j;
+	j["acc_bal"]["Ccy"]=string(acc_bal->Ccy);
+	j["acc_bal"]["CashBf"]=acc_bal->CashBf;
+	j["acc_bal"]["NotYetValue"]=acc_bal->NotYetValue;
+	j["acc_bal"]["TodayCash"]=acc_bal->TodayCash;
+	j["acc_bal"]["TodayOut"]=acc_bal->TodayOut;
+	j["acc_bal"]["Unpresented"]=acc_bal->Unpresented;
+
+	ASYNC_CALL_BACK(UpdatedAccountBalancePush,j);
+}
+
+
+
+//22
+void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
+{
+	printf("\nProductListByCodeReply(inst code:%s):%s. Ret Msg:%s\n", inst_code, is_ready?"Ok":"No", ret_msg);
+
+	json j;
+	j["inst_code"]=inst_code;
+	j["ret_msg"]=ret_msg;
+	j["is_ready"]=is_ready;
+	ASYNC_CALL_BACK(ProductListByCodeReply,j);
+}
+
+
+//23
 void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 {
 	if (ret_code == 0)cout << "Account Control Succeed" << endl;
 	else cout << "Account Control Failed [ret_code:"<< ret_code << " msg:"<< string(ret_msg) << "]" << endl;
-}
 
-void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
-{
-	struct tm *tblock;
-
-	time_t TheTime = trade->TradeTime;   
-	tblock = localtime(&TheTime);
-//wjc
-	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
-	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
-	cout <<" trade_qty=" << trade->Qty << endl;
-	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;   
+	json j;
+	j["ret_code"]=ret_code;
+	j["ret_msg"]=string(ret_msg);
+	ASYNC_CALL_BACK(ApiAccountControlReply,j);
 }
 
 
-void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
-{
-	printf("\nMM Order BeforeSend Report [acc_no:%s]:\nAskAccOrderNo:%ld , AskExtOrderNo#%lld , AskQty=%ld\nBidAccOrderNo:%ld , BidExtOrderNo#%lld, BidQty=%ld\n", mm_order->AccNo,
-			mm_order->AskAccOrderNo, mm_order->AskExtOrderNo , mm_order->AskQty, mm_order->BidAccOrderNo, mm_order->BidExtOrderNo,  mm_order->BidQty);
-}
 
-void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
-{
-	printf("\nMM Order Request Failed:Order#%ld [%ld (%s)], ClorderId=%s",mm_order->AccNo ,err_code, err_msg, mm_order->ClOrderId);
-}
 
-void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
-{
-	cout <<"Quote Request: ProductCode:"+ string(product_code) << "  b_s:"<< buy_sell << " qty="<< qty << endl;
-	//(buy_sell == 0)  strcpy(bs, "Both");
-	//(buy_sell == 'B')strcpy(bs, "Buy");
-	//(buy_sell == 'S')strcpy(bs, "Sell");
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 //http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
@@ -438,17 +614,17 @@ METHOD_START(on){
 		//if(strcmp(on,"LoginReply")==0){
 		//	r_call.Reset(isolate,func);
 		//}else{
-			_callback_map[string(on)].Reset(isolate, func);//STORE
+		_callback_map[string(on)].Reset(isolate, func);//STORE
 		//}
 	}
 }METHOD_END(on)
 
 /*
-void SpTraderLogic::call(const FunctionCallbackInfo<Value>& args) {
-	Local<String> in_api = Local<String>::Cast(args[0]);
-	char api[64];
-	V8ToCharPtr(in_api,api);
-	//cout << "call(" << api << ")" << endl;
+	 void SpTraderLogic::call(const FunctionCallbackInfo<Value>& args) {
+	 Local<String> in_api = Local<String>::Cast(args[0]);
+	 char api[64];
+	 V8ToCharPtr(in_api,api);
+//cout << "call(" << api << ")" << endl;
 }
 */
 
@@ -512,7 +688,7 @@ METHOD_START(SPAPI_GetAccInfo){
 
 METHOD_START(SPAPI_GetProduct){
 
-//TODO return a V8 Array...
+	//TODO return a V8 Array...
 	vector<SPApiProduct> apiProdList;
 	apiProxyWrapper.SPAPI_GetProduct(apiProdList);
 	for (int i = 0; i < apiProdList.size(); i++) {
@@ -565,27 +741,27 @@ METHOD_START(SPAPI_GetInstrument){
 	json j;
 	for (int i = 0; i < apiInstList.size(); i++) {
 		SPApiInstrument& inst = apiInstList[i];
-j[i]["MarketCode"]=inst.MarketCode;
-j[i]["InstName"]=inst.InstName;
-j[i]["InstName1"]=inst.InstName1;//need fix the encoding
-j[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
-j[i]["Ccy"]=inst.Ccy;
-j[i]["InstCode"]=inst.InstCode;
-j[i]["InstType"]=inst.InstType;
-/*
-double Margin;
-double ContractSize;
-STR16 MarketCode; //市场代码
-STR16 InstCode; //产品系列代码
-STR40 InstName; //英文名称
-STR40 InstName1; //繁体名称
-STR40 InstName2; //简体名称
-STR4 Ccy; //产品系列的交易币种
-char DecInPrice; //产品系列的小数位
-char InstType; //产品系列的类型
-*/
+		j[i]["MarketCode"]=inst.MarketCode;
+		j[i]["InstName"]=inst.InstName;
+		j[i]["InstName1"]=inst.InstName1;//need fix the encoding
+		j[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
+		j[i]["Ccy"]=inst.Ccy;
+		j[i]["InstCode"]=inst.InstCode;
+		j[i]["InstType"]=inst.InstType;
+		/*
+			 double Margin;
+			 double ContractSize;
+			 STR16 MarketCode; //市场代码
+			 STR16 InstCode; //产品系列代码
+			 STR40 InstName; //英文名称
+			 STR40 InstName1; //繁体名称
+			 STR40 InstName2; //简体名称
+			 STR4 Ccy; //产品系列的交易币种
+			 char DecInPrice; //产品系列的小数位
+			 char InstType; //产品系列的类型
+			 */
 	}
-cout << "j=" << j.dump(4) << endl;
+	cout << "j=" << j.dump(4) << endl;
 	printf("\n Instrument Count:%d",  apiInstList.size());
 }METHOD_END(SPAPI_GetInstrument)
 

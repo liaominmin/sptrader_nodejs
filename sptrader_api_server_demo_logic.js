@@ -1,3 +1,6 @@
+//WARNING: this logic for demo only
+
+
 const o2s=function(o){try{return JSON.stringify(o);}catch(ex){}};
 //const s2o=function(s){try{return JSON.parse(s);}catch(ex){}};//fail for parsing like {m:"XXX"}
 const s2o=function(s){try{return(new Function('return '+s))()}catch(ex){}};

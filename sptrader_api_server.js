@@ -10,7 +10,7 @@ function getSptraderModule(){
 	return require('./SpTrader.'+plugver+'.node');
 }
 
-const sptrader=getSptraderModule();
+const sptrader=getSptraderModule();//wrapper for libapiwrapper.so
 
 logger.log(sptrader.SPAPI_Initialize());
 
@@ -29,7 +29,7 @@ function argv2o(argv){
 var argo=argv2o(process.argv);
 logger.log(argo);
 
-var logic=require(argo.logic||"./sptrader_api_server_logic.js")({argo,sptrader});
+var logic=require(argo.logic||"./sptrader_api_server_demo_logic.js")({argo,sptrader});
 var http_server=require('http').createServer(logic)
 	.listen(ppp=argo.port||argo.p||4321,hhh=argo.host||argo.h||'0.0.0.0',()=>{
 		logger.log(hhh+':'+ppp);

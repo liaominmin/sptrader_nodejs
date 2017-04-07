@@ -1,5 +1,5 @@
-#ifndef SpTraderLogicH
-#define SpTraderLogicH
+//#ifndef SpTraderLogicH
+//#define SpTraderLogicH
 #include <string.h>
 #include "include/ApiProxyWrapper.h"
 #include "include/ApiProxyWrapperReply.h"
@@ -10,9 +10,7 @@ using namespace v8;
 
 #define EXPORT_DECLARE(fff) void fff(const FunctionCallbackInfo<Value>& args);
 
-//typedef void(SpTraderLogic::*PMA)(const FunctionCallbackInfo<Value>& args);
-
-class SpTraderLogic :  public ApiProxyWrapperReply
+class SpTraderLogic : public ApiProxyWrapperReply
 {
 	private:
 		ApiProxyWrapper apiProxyWrapper;
@@ -21,65 +19,37 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 		SpTraderLogic(void);
 		~SpTraderLogic(void);
 
-		//define the module methods
+		//declare the module methods
 		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));
 
 		//@ref ApiProxyWrapperReply
 		virtual void OnTest();
-
 		virtual void OnLoginReply(long ret_code,char *ret_msg);
-
 		virtual void OnConnectedReply(long host_type, long con_status);
-
 		virtual void OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg);
-
 		virtual void OnApiOrderReport(long rec_no, const SPApiOrder *order);
-
 		virtual void OnApiOrderBeforeSendReport(const SPApiOrder *order);
-
 		virtual void OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg);
-
 		virtual void OnAccountLogoutReply(long ret_code, char* ret_msg);
-
 		virtual void OnAccountInfoPush(const SPApiAccInfo *acc_info);
-
 		virtual void OnAccountPositionPush(const SPApiPos *pos);
-
 		virtual void OnUpdatedAccountPositionPush(const SPApiPos *pos);
-
 		virtual void OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal);
-
 		virtual void OnApiTradeReport(long rec_no, const SPApiTrade *trade);
-
 		virtual void OnApiPriceUpdate(const SPApiPrice *price);
-
 		virtual void OnApiTickerUpdate(const SPApiTicker *ticker);
-
 		virtual void OnPswChangeReply(long ret_code, char *ret_msg);
-
 		virtual void OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg);
-
 		virtual void OnInstrumentListReply(bool is_ready, char *ret_msg);
-
 		virtual void OnBusinessDateReply(long business_date);
-
 		virtual void OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order);
-
 		virtual void OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg);
-
 		virtual void OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty);
-
 		virtual void OnApiAccountControlReply(long ret_code, char *ret_msg);
-
 		virtual void OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade);
-
 };
 
-
-#endif
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//#include "SpTraderLogic.h"
 
 #include <unistd.h>
 #include <ctype.h>
@@ -91,18 +61,18 @@ class SpTraderLogic :  public ApiProxyWrapperReply
 
 //https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp
 #include "json.hpp"
-// for convenience
+
+// short for convenience
 using json = nlohmann::json;
 
 #include <iostream>
 #include <map>
 
-//#include "ApiProxyWrapper.h"
-//ApiProxyWrapper apiProxyWrapper;
-
 using namespace v8;
 using namespace std;
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//macro ASYNC_CALL_BACK that will call callback (if any) with result json data
 #define ASYNC_CALL_BACK($callbackName,$jsonData)\
 	ShareData * req_data = new ShareData;\
 	req_data->strCallback=string(#$callbackName);\
@@ -124,26 +94,38 @@ struct ShareData
 void worker_cb(uv_work_t * req){
 	//cout << "worker_cb" << endl;
 }
+
+//handler for worker callback:
 void after_worker_cb(uv_work_t * req,int status){
 	//cout << "after_worker_cb" << endl;
 
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 
+	//enter handle scope
 	HandleScope handle_scope(isolate);
 
+	//get req->data as 'my_data'
 	ShareData * my_data = static_cast<ShareData *>(req->data);
 
 	Local<Function> js_callback = Local<Function>::New(isolate,_callback_map[my_data->strCallback]);
 
 	if(!js_callback.IsEmpty()){
+		//get the json data from my_data
 		json j=my_data->j;
-		const unsigned argc = 1;
+
+		//json data to string:
 		string j_s=j.dump();
+
+		//string => c string => v8 string
 		v8::Local<v8::String> str=String::NewFromUtf8(isolate,j_s.c_str());
+		// v8 string => v8 value
 		v8::Local<v8::Value> result = v8::JSON::Parse(str);
+
+		//build the first arg as result for callback
+		const unsigned argc = 1;
 		v8::Local<v8::Value> argv[argc];
-		//argv[argc] = result;
 		argv[0] = result;
+
 		js_callback->Call(v8::Null(isolate), argc, argv);
 	}
 	delete my_data;//IMPORTANT
@@ -167,14 +149,27 @@ void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 {
 	json j;
+
 	j["host_type"]=host_type;
 	j["conn_status"]=conn_status;
+
 	ASYNC_CALL_BACK(ConnectedReply,j);
 }
 
+//for 1.3 SPAPI_RegisterOrderRequestFailed
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
 	cout << "Order Request Failed: Order#"  << order->IntOrderNo << " [" << err_code << " (" +string(err_msg) << ")], Action=" << action << " ClorderId=" +string(order->ClOrderId) << endl;
+
+	json j;
+
+	j["action"]=action;
+	j["order"]["ClOrderId"]=string(order->ClOrderId);
+	j["order"]["IntOrderNo"]=order->IntOrderNo;
+	j["err_code"]=err_code;
+	j["err_msg"]=err_msg;
+
+	ASYNC_CALL_BACK(ApiOrderRequestFailed,j);
 }
 
 void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
@@ -182,11 +177,35 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 	//cout << "Order Report [acc_no:" +string(order->AccNo) << "] Status=" << string(OutputOrderStatus(order->Status)) << " Order#" << order->IntOrderNo << " ProdCode="+string(order->ProdCode);
 	cout << " Price=" << order->Price << " Qty=" << order->Qty << " TradedQty=" << order->TradedQty << " TotalQty=" << order->TotalQty;
 	cout << " ClOrderId=" +string(order->ClOrderId) << endl;
+
+	json j;
+
+	j["rec_no"]=rec_no;
+	j["order"]["Price"]=order->Price;
+	j["order"]["Qty"]=order->Qty;
+	j["order"]["TradedQty"]=order->TradedQty;
+	j["order"]["TotalQty"]=order->TotalQty;
+	j["order"]["ClOrderId"]=string(order->ClOrderId);
+	//j["order"]["IntOrderNo"]=order->IntOrderNo;
+
+	ASYNC_CALL_BACK(ApiOrderReport,j);
 }
 
 void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 {
-	OnApiOrderReport(0, order);
+//reuse OnApiOrderReport()
+//OnApiOrderReport(0, order);
+	json j;
+
+	j["rec_no"]=0;
+	j["order"]["Price"]=order->Price;
+	j["order"]["Qty"]=order->Qty;
+	j["order"]["TradedQty"]=order->TradedQty;
+	j["order"]["TotalQty"]=order->TotalQty;
+	j["order"]["ClOrderId"]=string(order->ClOrderId);
+	//j["order"]["IntOrderNo"]=order->IntOrderNo;
+
+	ASYNC_CALL_BACK(ApiOrderBeforeSendReport,j);
 }
 
 void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
@@ -415,7 +434,7 @@ METHOD_START(on){
 	HANDLE_JS_ARGS_STR(args[0],on,64);
 	if (args.Length() > 1 && args[1]->IsFunction() ){//IF on($eventName,$callbackFunction
 		v8::Local<v8::Function> func = v8::Local<v8::Function>::Cast(args[1]);//CASTING
-		v8::Function * ptr = *func;//IMPORTANT
+		v8::Function *ptr = *func;//IMPORTANT
 		//if(strcmp(on,"LoginReply")==0){
 		//	r_call.Reset(isolate,func);
 		//}else{
@@ -572,3 +591,7 @@ cout << "j=" << j.dump(4) << endl;
 
 
 
+
+
+//SpTraderLogicH
+//#endif

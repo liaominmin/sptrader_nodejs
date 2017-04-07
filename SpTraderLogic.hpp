@@ -23,30 +23,54 @@ class SpTraderLogic : public ApiProxyWrapperReply
 		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));
 
 		//@ref ApiProxyWrapperReply
+		//0
 		virtual void OnTest();
+		//1
 		virtual void OnLoginReply(long ret_code,char *ret_msg);
-		virtual void OnConnectedReply(long host_type, long con_status);
-		virtual void OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg);
-		virtual void OnApiOrderReport(long rec_no, const SPApiOrder *order);
-		virtual void OnApiOrderBeforeSendReport(const SPApiOrder *order);
-		virtual void OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg);
-		virtual void OnAccountLogoutReply(long ret_code, char* ret_msg);
-		virtual void OnAccountInfoPush(const SPApiAccInfo *acc_info);
-		virtual void OnAccountPositionPush(const SPApiPos *pos);
-		virtual void OnUpdatedAccountPositionPush(const SPApiPos *pos);
-		virtual void OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal);
-		virtual void OnApiTradeReport(long rec_no, const SPApiTrade *trade);
-		virtual void OnApiPriceUpdate(const SPApiPrice *price);
-		virtual void OnApiTickerUpdate(const SPApiTicker *ticker);
+		//2
 		virtual void OnPswChangeReply(long ret_code, char *ret_msg);
-		virtual void OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg);
-		virtual void OnInstrumentListReply(bool is_ready, char *ret_msg);
-		virtual void OnBusinessDateReply(long business_date);
-		virtual void OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order);
+		//3
+		virtual void OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg);
+		//4
+		virtual void OnApiOrderBeforeSendReport(const SPApiOrder *order);
+		//5
 		virtual void OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg);
+		//6
+		virtual void OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order);
+		//7
 		virtual void OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty);
-		virtual void OnApiAccountControlReply(long ret_code, char *ret_msg);
+		//8
+		virtual void OnApiTradeReport(long rec_no, const SPApiTrade *trade);
+		//9
 		virtual void OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade);
+		//10
+		virtual void OnApiPriceUpdate(const SPApiPrice *price);
+		//11
+		virtual void OnApiTickerUpdate(const SPApiTicker *ticker);
+		//12
+		virtual void OnApiOrderReport(long rec_no, const SPApiOrder *order);
+		//13
+		virtual void OnInstrumentListReply(bool is_ready, char *ret_msg);
+		//14
+		virtual void OnBusinessDateReply(long business_date);
+		//15
+		virtual void OnConnectedReply(long host_type, long con_status);
+		//16
+		virtual void OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg);
+		//17
+		virtual void OnAccountLogoutReply(long ret_code, char* ret_msg);
+		//18
+		virtual void OnAccountInfoPush(const SPApiAccInfo *acc_info);
+		//19
+		virtual void OnAccountPositionPush(const SPApiPos *pos);
+		//20
+		virtual void OnUpdatedAccountPositionPush(const SPApiPos *pos);
+		//21
+		virtual void OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal);
+		//22
+		virtual void OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg);
+		//23
+		virtual void OnApiAccountControlReply(long ret_code, char *ret_msg);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,8 +199,6 @@ void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *or
 //4
 void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 {
-	//reuse OnApiOrderReport()
-	//OnApiOrderReport(0, order);
 	json j;
 
 	j["rec_no"]=0;

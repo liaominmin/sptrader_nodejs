@@ -12,6 +12,10 @@ function getSptraderModule(){
 
 const sptrader=getSptraderModule();//wrapper for libapiwrapper.so
 
+logger.log("__dirname=" + __dirname);
+
+logger.log(process.versions);
+
 logger.log(sptrader.SPAPI_Initialize());
 
 logger.log(sptrader.SPAPI_GetDllVersion());

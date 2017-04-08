@@ -54,19 +54,25 @@ module.exports = function(opts){
 	var port=opts.port||5555;
 
 	//NOTES: using Proxy(NODEJS6+ Harmony feature that support some magic method)
+	//https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Proxy
 	return new Proxy({},{
+
+		//mmm is name of method()
 		get: (target, mmm, receiver)=>{
+
 			var default_method=new Proxy(()=>{},{
 				apply: function(target, thisArg, argumentsList) {
 					return null;
 				}
 			});
 
+			//return if already exists:
 			var rt=target[mmm];
 			if(rt){ return rt; }
 
+			//return a empty default method() for not string 
 			if ('string'!=typeof mmm){
-				logger.log('strange mmm=',mmm);
+				logger.log('TODO mmm=',mmm);
 				return default_method;
 			}
 
@@ -74,10 +80,13 @@ module.exports = function(opts){
 			if(!methods){ methods=target._methods_={}; }
 			rt=methods[mmm];
 			if(!rt){
+				//if the method not buffered, build one
 				rt=methods[mmm]=new Proxy(()=>{},{
 					apply: function(target, thisArg, argumentsList){
 						var callParam={m:mmm};
 						if(argumentsList && argumentsList.length>0) callParam.p=argumentsList[0];
+
+						//send to remote and return a Promise:
 						return SimpleRequest(host,port,callParam);
 					}
 				});

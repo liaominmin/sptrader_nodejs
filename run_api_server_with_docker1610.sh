@@ -4,10 +4,6 @@
 
 SPTRADERDIR=$(cd `dirname $0`; pwd)
 cd $SPTRADERDIR
-#docker run -v"$PWD:/sptrader" -ti -w/sptrader $1 \
-#	cmptech/auto_ubuntu1610_nodejs_sharessl \
-#	sh run_api_server_in_docker.sh $*
 docker run -v"$PWD:/sptrader" -ti -w/sptrader $1 \
-	cmptech/auto_ubuntuessential_nodejs_sharessl \
+	cmptech/auto_ubuntu1610_nodejs_sharessl \
 	sh run_api_server_in_docker.sh $*
-

@@ -16,13 +16,13 @@ class SpTraderLogic : public ApiProxyWrapperReply
 		ApiProxyWrapper apiProxyWrapper;
 
 	public:
-		SpTraderLogic(void);
-		~SpTraderLogic(void);
+		//SpTraderLogic(void);
+		//~SpTraderLogic(void);
 
 		//declare the module methods
 		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));
 
-		//@ref ApiProxyWrapperReply
+		//@ref ApiProxyWrapperReply && API DOC (Callback)
 		//0
 		virtual void OnTest();
 		//1
@@ -104,6 +104,14 @@ req_data->request.data = req_data;\
 req_data->j=$jsonData;\
 uv_queue_work(uv_default_loop(),&(req_data->request),worker_cb,after_worker_cb); 
 
+//TODO
+//#define ASYNC_CALL_BACK2($callback,$jsonData)\
+//UvData * req_data = new UvData;\
+//req_data->callback=callback;\
+//req_data->request.data = req_data;\
+//req_data->j=$jsonData;\
+//uv_queue_work(uv_default_loop(),&(req_data->request),worker_cb2,after_worker_cb2); 
+
 //a map to store the callback.  now only on call supported ;)
 map<string, v8::Persistent<v8::Function> > _callback_map; 
 
@@ -114,9 +122,20 @@ struct ShareData
 	string strCallback;//the name of the callback
 };
 
+struct UvData
+{
+	uv_work_t request;//@ref uv_queue_work()
+	json j;//the data to send back
+	v8::Persistent<v8::Function> callback;
+};
+
 //sth related to the req->data but no isolate
 void worker_cb(uv_work_t * req){
 	//cout << "worker_cb" << endl;
+	// This method will run in a seperate thread where you can do 
+	// your blocking background work.
+	// In this function, you cannot under any circumstances access any V8/node js
+	// valiables -- all data and memory needed, MUSt be in the ShareData structure
 }
 
 //handler for worker callback:
@@ -239,7 +258,6 @@ void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 
 	ASYNC_CALL_BACK(MMOrderBeforeSendReport,j);
 }
-
 
 //7.SPAPI_RegisterQuoteRequestReceivedReport
 void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
@@ -409,7 +427,6 @@ void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 	ASYNC_CALL_BACK(ConnectedReply,j);
 }
 
-
 //16
 void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
 {
@@ -517,8 +534,6 @@ void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 	ASYNC_CALL_BACK(UpdatedAccountBalancePush,j);
 }
 
-
-
 //22
 void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
 {
@@ -531,7 +546,6 @@ void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, cha
 	ASYNC_CALL_BACK(ProductListByCodeReply,j);
 }
 
-
 //23
 void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 {
@@ -543,10 +557,6 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALL_BACK(AccountControlReply,j);
 }
-
-
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
@@ -591,22 +601,31 @@ void V8ToCharPtr(const Local<Value>& v8v, char* rt){
 
 //isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, #kkk" is not number?")));
 
-#define METHOD_START(methodname)\
-	void SpTraderLogic::methodname(const FunctionCallbackInfo<Value>& args) {\
+//TODO if args.Length()>1, assume the [1] is the callback!!
+
+#define METHOD_START($methodname)\
+	void SpTraderLogic::$methodname(const FunctionCallbackInfo<Value>& args) {\
+		int args_len=args.Length();\
 		Isolate* isolate = args.GetIsolate();\
 		Local<Object> rt= Object::New(isolate);\
 		Local<Object> in= Object::New(isolate);\
 		Local<Object> out= Object::New(isolate);\
-		Local<Object> param;\
+		Local<Object> param = Object::New(isolate);\
+		Local<Function> callback;\
 		if (args.Length()>0){\
-			param = Local<Object>::Cast(args[0]);\
-		}else{\
-			param = Object::New(isolate);\
+			if(args[args_len-1]->IsFunction()){\
+				callback = Local<Function>::Cast(args[args_len-1]);\
+				if(args_len>1){\
+					param = Local<Object>::Cast(args[0]);\
+				}\
+			}else{\
+				param = Local<Object>::Cast(args[0]);\
+			}\
 		}\
 		int rc=0;
 
-#define METHOD_END(methodname)\
-		rt->Set(String::NewFromUtf8(isolate,"api"), String::NewFromUtf8(isolate,#methodname));\
+#define METHOD_END($methodname)\
+		rt->Set(String::NewFromUtf8(isolate,"api"), String::NewFromUtf8(isolate,#$methodname));\
 		rt->Set(String::NewFromUtf8(isolate,"in"), in);\
 		rt->Set(String::NewFromUtf8(isolate,"out"), out);\
 		FILL_RC_INT(rc);\
@@ -615,50 +634,59 @@ void V8ToCharPtr(const Local<Value>& v8v, char* rt){
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-SpTraderLogic::SpTraderLogic(void){
-	apiProxyWrapper.SPAPI_Initialize();
-}
-SpTraderLogic::~SpTraderLogic(void){
-	//no need, will cause seg-fault
-	//apiProxyWrapper.SPAPI_Logout();
-	//apiProxyWrapper.SPAPI_Uninitialize();
-}
-//void SpTraderLogic::setExports(const Local<Object>& exports){
-//	_exports=* exports; 
+//SpTraderLogic::SpTraderLogic(void){
+//	apiProxyWrapper.SPAPI_Initialize();
+//}
+//SpTraderLogic::~SpTraderLogic(void){
+//	//no need, will cause seg-fault...
+//	//apiProxyWrapper.SPAPI_Logout();
+//	//apiProxyWrapper.SPAPI_Uninitialize();
 //}
 
 //store the callback (only one support now... solve in future if needed...)
 METHOD_START(on){
 	HANDLE_JS_ARGS_STR(args[0],on,64);
-	if (args.Length() > 1 && args[1]->IsFunction() ){//IF on($eventName,$callbackFunction
-		v8::Local<v8::Function> func = v8::Local<v8::Function>::Cast(args[1]);//CASTING
-		v8::Function *ptr = *func;//IMPORTANT
-		//if(strcmp(on,"LoginReply")==0){
-		//	r_call.Reset(isolate,func);
-		//}else{
-		_callback_map[string(on)].Reset(isolate, func);//STORE
-		//}
+
+	if(!callback.IsEmpty()){
+		//v8::Local<v8::Function> func = v8::Local<v8::Function>::Cast(args[1]);
+		//v8::Function *ptr = *func;//casting from Local<Function> to Function
+		//_callback_map[string(on)].Reset(isolate, func);//save to map
+
+		cout << "save callback for "<< string(on) << endl;
+		_callback_map[string(on)].Reset(isolate, callback);//save to map
 	}
 }METHOD_END(on)
 
-/*
-	 void SpTraderLogic::call(const FunctionCallbackInfo<Value>& args) {
-	 Local<String> in_api = Local<String>::Cast(args[0]);
-	 char api[64];
-	 V8ToCharPtr(in_api,api);
-//cout << "call(" << api << ")" << endl;
-}
-*/
+//METHOD_START(call){
+//}METHOD_END(call)
 
+METHOD_START(call){
+	HANDLE_JS_ARGS_STR(args[0],call,64);
+	//if(!callback.IsEmpty()){
+	//	cout << "TODO SPAPI_Initialize() w+ callback" << endl;
+	//	//TODO ASYNC MODE
+	//	rc = apiProxyWrapper.SPAPI_Initialize();
+	//	rt->Set(String::NewFromUtf8(isolate,"mode"), String::NewFromUtf8(isolate,"ASYNC"));
+	//}else{
+	//	//SYNC MODE
+	//	cout << "TODO SPAPI_Initialize w- callback" << endl;
+	//	rc = apiProxyWrapper.SPAPI_Initialize();
+	//	rt->Set(String::NewFromUtf8(isolate,"mode"), String::NewFromUtf8(isolate,"SYNC"));
+	//}
+
+}METHOD_END(call)
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//下面的都准备移除和重写!!!
 METHOD_START(SPAPI_Initialize){
 
 	rc = apiProxyWrapper.SPAPI_Initialize();
-
 }METHOD_END(SPAPI_Initialize)
 
 METHOD_START(SPAPI_GetDllVersion){
 
-	char ver_no[100], rel_no[100], suffix[100];
+	char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
 
 	rc = apiProxyWrapper.SPAPI_GetDllVersion(ver_no, rel_no, suffix);
 
@@ -786,10 +814,6 @@ METHOD_START(SPAPI_GetInstrument){
 	cout << "j=" << j.dump(4) << endl;
 	printf("\n Instrument Count:%d",  apiInstList.size());
 }METHOD_END(SPAPI_GetInstrument)
-
-
-
-
 
 //SpTraderLogicH
 //#endif

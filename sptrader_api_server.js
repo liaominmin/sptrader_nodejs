@@ -16,9 +16,21 @@ logger.log("__dirname=" + __dirname);
 
 logger.log(process.versions);
 
-logger.log(sptrader.SPAPI_Initialize());
+sptrader.SPAPI_Initialize();
 
-logger.log(sptrader.SPAPI_GetDllVersion());
+sptrader.on('Test',function(rt){
+	logger.log("callback(Test)=>",rt);
+});
+
+logger.log(sptrader.SPAPI_Initialize({},function(rt){
+	logger.log('SPAPI_Initialize.rt=',rt);
+}));
+
+logger.log(sptrader.SPAPI_GetDllVersion({}));
+
+logger.log(sptrader.SPAPI_GetDllVersion({},function(rt){
+	logger.log('SPAPI_GetDllVersion.rt=',rt);
+}));
 
 function argv2o(argv){
 	var argv_o={};

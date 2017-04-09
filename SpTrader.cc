@@ -4,7 +4,7 @@
 //define NODE_MODULE_NAME & NODE_MODULE_FUNC_LIST for node_addon.h:
 #define NODE_MODULE_NAME SpTrader
 #define NODE_MODULE_FUNC_LIST \
-	on\
+on,call\
 ,SPAPI_Initialize\
 ,SPAPI_GetDllVersion\
 ,SPAPI_GetLoginStatus\

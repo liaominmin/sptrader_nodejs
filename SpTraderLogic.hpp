@@ -110,10 +110,11 @@ void SpTraderLogic::OnTest()
 void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 {
 	json j;
-	//char out_ret_msg[128]={0};
-	//strcpy(out_ret_msg,ret_msg);
+	char out_ret_msg[128]={0};
+	strcpy(out_ret_msg,ret_msg);
 	j["ret_code"]=ret_code;
-	j["ret_msg"]=string(ret_msg);
+	//j["ret_msg"]=string(ret_msg);//seems sgmt fault...?
+	j["ret_msg"]=out_ret_msg;
 	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
 }
 //2
@@ -644,7 +645,36 @@ inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 //METHOD_START(SPAPI_GetInstrumentCount){
 //	rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
 //}METHOD_END(SPAPI_GetInstrumentCount)
-//,SPAPI_GetInstrument\
+inline void SPAPI_GetInstrument(ShareDataCall * my_data){
+	json in=my_data->in;
+	vector<SPApiInstrument> apiInstList;
+	my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
+	json out;
+	/* TODO 
+		 double Margin;
+		 double ContractSize;
+		 STR16 MarketCode; //市场代码
+		 STR16 InstCode; //产品系列代码
+		 STR40 InstName; //英文名称
+		 STR40 InstName1; //繁体名称
+		 STR40 InstName2; //简体名称
+		 STR4 Ccy; //产品系列的交易币种
+		 char DecInPrice; //产品系列的小数位
+		 char InstType; //产品系列的类型
+		 */
+	for (int i = 0; i < apiInstList.size(); i++) {
+		SPApiInstrument& inst = apiInstList[i];
+		out[i]["MarketCode"]=inst.MarketCode;
+		out[i]["InstName"]=inst.InstName;
+		out[i]["InstName1"]=inst.InstName1;//need fix the encoding
+		out[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
+		out[i]["Ccy"]=inst.Ccy;
+		out[i]["InstCode"]=inst.InstCode;
+		out[i]["InstType"]=inst.InstType;
+	}
+	my_data->out=out;
+}
+
 //METHOD_START(SPAPI_GetInstrument){
 //	vector<SPApiInstrument> apiInstList;
 //	apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
@@ -692,9 +722,9 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json out;
 	for (int i = 0; i < apiProdList.size(); i++) {
 		SPApiProduct& prod = apiProdList[i];
-		out[i+1]["ProdCode"]=prod.ProdCode;
-		out[i+1]["ProdName"]=prod.ProdName;
-		out[i+1]["InstCode"]=prod.InstCode;
+		out[i]["ProdCode"]=prod.ProdCode;
+		out[i]["ProdName"]=prod.ProdName;
+		out[i]["InstCode"]=prod.InstCode;
 		//printf("\n Number:%d  ProdCode=%s , ProdName=%s , InstCode=%s ",i+1, prod.ProdCode, prod.ProdName, prod.InstCode);
 	}
 	my_data->out=out;
@@ -716,6 +746,8 @@ void worker_for_call(uv_work_t * req){
 		SPAPI_LoadProductInfoListByCode(my_data);
 	}else if(api=="SPAPI_GetDllVersion"){
 		SPAPI_GetDllVersion(my_data);
+	}else if(api=="SPAPI_GetInstrument"){
+		SPAPI_GetInstrument(my_data);
 	}else if(api=="SPAPI_SetLoginInfo"){
 		SPAPI_SetLoginInfo(my_data);
 	}else if(api=="SPAPI_Login"){

@@ -597,6 +597,24 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 #define FILL_RS_STR(field)\
 	out->Set(String::NewFromUtf8(isolate,#field), String::NewFromUtf8(isolate,field));
 
+#define HANDLE_IN_TO_INT(aaa,kkk)\
+	int kkk=0;\
+	if(aaa.is_number_integer()){\
+		kkk=aaa;\
+	}
+
+#define HANDLE_IN_TO_STR(aaa,kkk,len)\
+	char kkk[len]={0};\
+	if(aaa.is_string()){\
+		string str_in_##kkk=aaa;\
+		strcpy(kkk,str_in_##kkk.c_str());\
+	}
+
+#define HANDLE_JS_ARG_TO_STR(aaa,kkk,len)\
+	Local<String> in_##kkk = Local<String>::Cast(aaa);\
+	char kkk[len];\
+	V8ToCharPtr(in_##kkk,kkk);
+
 #define HANDLE_JS_ARGS_STR(aaa,kkk,len)\
 	Local<String> in_##kkk = Local<String>::Cast(aaa);\
 	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
@@ -654,21 +672,63 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 struct ShareDataCall
 {
 	uv_work_t request;//@ref uv_queue_work()
-	string api;//the api name...TODO
-	json in;//the requested param/in
-	json out;//the return json
+
+	SpTraderLogic * logic;
+	string api;//the api name
+	json in;
+	json out;
+	json rst;
 	v8::Persistent<v8::Function> callback;
-	int rc=-99;//for the API return char
+	int rc=-99;
 };
 
 inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
+
 	char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
 	my_data->rc = apiProxyWrapper.SPAPI_GetDllVersion(ver_no, rel_no, suffix);
+
 	json out;
 	out["ver_no"]=ver_no;
 	out["rel_no"]=rel_no;
 	out["suffix"]=suffix;
 	my_data->out=out;
+}
+inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
+
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_INT(in["host_id"],host_id);
+
+	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
+}
+
+inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
+
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["host"],host,256);
+	HANDLE_IN_TO_INT(in["port"],port);
+	HANDLE_IN_TO_STR(in["license"],license,256);
+	HANDLE_IN_TO_STR(in["app_id"],app_id,256);
+	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_STR(in["password"],password,256);
+
+	my_data->rc =0;
+	apiProxyWrapper.SPAPI_SetLoginInfo(host, port, license, app_id, user_id, password);
+}
+
+inline void SPAPI_Login(ShareDataCall * my_data){
+
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["host"],host,256);
+	HANDLE_IN_TO_INT(in["port"],port);
+	HANDLE_IN_TO_STR(in["license"],license,256);
+	HANDLE_IN_TO_STR(in["app_id"],app_id,256);
+	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_STR(in["password"],password,256);
+
+	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(my_data->logic);
+
+	my_data->rc =apiProxyWrapper.SPAPI_Login();
 }
 
 // This method will run in a seperate thread where you can do your blocking background work.
@@ -681,16 +741,27 @@ void worker_for_call(uv_work_t * req){
 	json in=my_data->in;
 	string api=my_data->api;
 
-	json out;
+	json rst;
+	rst["api"]=api;
+	rst["in"]=in;
+
 	if(api=="SPAPI_GetDllVersion"){
 		SPAPI_GetDllVersion(my_data);
+	}else if(api=="SPAPI_GetLoginStatus"){
+		SPAPI_GetLoginStatus(my_data);
+	}else if(api=="SPAPI_SetLoginInfo"){
+		SPAPI_SetLoginInfo(my_data);
+	}else if(api=="SPAPI_Login"){
+		SPAPI_Login(my_data);
 	}else if(api=="???"){
 	}else{
+		json out;
 		out["STS"]="KO";
 		out["errmsg"]="TODO "+api;
 		my_data->out=out;
-		//cout << "DEBUG TODO in="<< in.dump() << ",api=" << api << endl;
 	}
+	rst["out"]=my_data->out;
+	my_data->rst=rst;
 }
 
 void after_worker_for_call(uv_work_t * req,int status){
@@ -707,9 +778,8 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
 
 	if(!callback.IsEmpty()){
-		//build return
 		const unsigned argc = 1;
-		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
+		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(String::NewFromUtf8(isolate,my_data->rst.dump().c_str()))};
 		//call back
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
@@ -730,51 +800,61 @@ SpTraderLogic::~SpTraderLogic(void){
 METHOD_START_ONCALL(on){
 	HANDLE_JS_ARGS_STR(args[0],on,64);
 
-	//save to the cache map if exists callback
+	//save to the cache map
 	if(!callback.IsEmpty()){
 		_callback_map[string(on)].Reset(isolate, callback);
 	}
 }METHOD_END_ONCALL(on)
 
+/**
+ * call(m,callback) and return in/out/rc
+ * if callback means async
+ * please try using async mode as much as possible, 'coz sync mode might block the nodejs
+ */
 METHOD_START_ONCALL(call){
 
-	//HANDLE_JS_ARGS_STR(args[0],call,64);
-	v8::Local<v8::String> in_call = v8::Local<v8::String>::Cast(args[0]);
-	char call[64];
-	V8ToCharPtr(in_call,call);
+	if(args.Length()>0){
+		//convert args[0] to var "call"
+		HANDLE_JS_ARG_TO_STR(args[0],call,64);
 
-	ShareDataCall * req_data = new ShareDataCall;
-	req_data->request.data = req_data;//link uv_work_t.data to self
+		ShareDataCall * req_data = new ShareDataCall;
+		//link uv_work_t.data to self
+		req_data->request.data = req_data;
 
-	req_data->api=string(call);
+		req_data->logic = this;//for callback...
 
-	req_data->in=json::parse(json_stringify(isolate,in));
+		req_data->api=string(call);
 
-	if(!callback.IsEmpty()){
-		//ASYNC MODE
-		rt->Set(String::NewFromUtf8(isolate,"mode"), String::NewFromUtf8(isolate,"ASYNC"));
-		//cout << "TODO " << call << " w+ callback" << endl;
+		req_data->in=json::parse(json_stringify(isolate,in));
 
-		req_data->callback.Reset(isolate, callback);
+		if(!callback.IsEmpty()){
+			//ASYNC MODE
+			rt->Set(String::NewFromUtf8(isolate,"mode"), String::NewFromUtf8(isolate,"ASYNC"));
+			//cout << "TODO " << call << " w+ callback" << endl;
 
-		uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call); 
-	}else{
-		//SYNC MODE
-		rt->Set(String::NewFromUtf8(isolate,"mode"), String::NewFromUtf8(isolate,"SYNC"));
-		cout << "TODO " << call << " w- callback" << endl;
+			req_data->callback.Reset(isolate, callback);
 
-		//call synchronously
-		worker_for_call(& req_data->request);
+			uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call); 
+		}else{
+			//SYNC MODE
+			rt->Set(String::NewFromUtf8(isolate,"mode"), String::NewFromUtf8(isolate,"SYNC"));
+			cout << "TODO " << call << " w- callback" << endl;
 
-		v8::Local<v8::Value> tmp= v8::JSON::Parse(String::NewFromUtf8(isolate,req_data->out.dump().c_str()));
-		//out=v8::Object::Cast(v8::JSON::Parse(String::NewFromUtf8(isolate,req_data->out.dump().c_str())));
-		out= v8::Local<v8::Object>::Cast(tmp);
-		rc=req_data->rc;
+			//call synchronously
+			worker_for_call(& req_data->request);
+
+			//v8::Local<v8::Value> tmp= v8::JSON::Parse(String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str()));
+			//out=v8::Object::Cast(v8::JSON::Parse(String::NewFromUtf8(isolate,req_data->out.dump().c_str())));
+			//out= v8::Local<v8::Object>::Cast(tmp);
+			out= v8::Local<v8::Object>::Cast(v8::JSON::Parse(String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())));
+			rc=req_data->rc;
+		}
 	}
+
 }METHOD_END_ONCALL(call)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//下面的都准备移除和重写!!!
+//下面的都准备移除
 
 //#define METHOD_START($methodname)\
 //	void SpTraderLogic::$methodname(const FunctionCallbackInfo<Value>& args) {\

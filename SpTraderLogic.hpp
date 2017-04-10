@@ -138,15 +138,17 @@ uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_on,after_worker_
 void SpTraderLogic::OnTest()
 {
 	json j;
-	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
+	ASYNC_CALLBACK_FOR_ON(Test,j);
 }
 
 //1
 void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 {
 	json j;
+	char out_ret_msg[128];
+	strcpy(out_ret_msg,ret_msg);
 	j["ret_code"]=ret_code;
-	j["ret_msg"]=string(ret_msg);
+	j["ret_msg"]=out_ret_msg;
 	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
 }
 //2
@@ -730,6 +732,51 @@ inline void SPAPI_Login(ShareDataCall * my_data){
 
 	my_data->rc =apiProxyWrapper.SPAPI_Login();
 }
+
+//METHOD_START(SPAPI_LoadInstrumentList){
+//	rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
+//}METHOD_END(SPAPI_LoadInstrumentList)
+//
+//METHOD_START(SPAPI_GetInstrumentCount){
+//	rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
+//}METHOD_END(SPAPI_GetInstrumentCount)
+//
+//METHOD_START(SPAPI_LoadProductInfoListByCode){
+//
+//	HANDLE_JS_PARAM_STR(inst_code,64);
+//	rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
+//	FILL_RS_STR(inst_code)
+//}METHOD_END(SPAPI_LoadProductInfoListByCode)
+//
+//METHOD_START(SPAPI_GetInstrument){
+//	vector<SPApiInstrument> apiInstList;
+//	apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
+//	json j;
+//	for (int i = 0; i < apiInstList.size(); i++) {
+//		SPApiInstrument& inst = apiInstList[i];
+//		j[i]["MarketCode"]=inst.MarketCode;
+//		j[i]["InstName"]=inst.InstName;
+//		j[i]["InstName1"]=inst.InstName1;//need fix the encoding
+//		j[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
+//		j[i]["Ccy"]=inst.Ccy;
+//		j[i]["InstCode"]=inst.InstCode;
+//		j[i]["InstType"]=inst.InstType;
+//		/*
+//			 double Margin;
+//			 double ContractSize;
+//			 STR16 MarketCode; //市场代码
+//			 STR16 InstCode; //产品系列代码
+//			 STR40 InstName; //英文名称
+//			 STR40 InstName1; //繁体名称
+//			 STR40 InstName2; //简体名称
+//			 STR4 Ccy; //产品系列的交易币种
+//			 char DecInPrice; //产品系列的小数位
+//			 char InstType; //产品系列的类型
+//			 */
+//	}
+//	cout << "j=" << j.dump(4) << endl;
+//	printf("\n Instrument Count:%d",  apiInstList.size());
+//}METHOD_END(SPAPI_GetInstrument)
 
 // This method will run in a seperate thread where you can do your blocking background work.
 // NOTES: In this function, you cannot access any V8/node js valiables

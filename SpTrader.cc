@@ -5,17 +5,15 @@
 #define NODE_MODULE_NAME SpTrader
 #define NODE_MODULE_FUNC_LIST \
 on,call\
-,SPAPI_Initialize\
-,SPAPI_GetDllVersion\
-,SPAPI_GetLoginStatus\
-,SPAPI_SetLoginInfo\
-,SPAPI_Login\
-,SPAPI_GetAccInfo\
-,SPAPI_LoadInstrumentList\
-,SPAPI_GetInstrumentCount\
-,SPAPI_GetInstrument\
-,SPAPI_LoadProductInfoListByCode\
-,SPAPI_GetProduct
+//,SPAPI_GetLoginStatus\
+//,SPAPI_SetLoginInfo\
+//,SPAPI_Login\
+//,SPAPI_GetAccInfo\
+//,SPAPI_LoadInstrumentList\
+//,SPAPI_GetInstrumentCount\
+//,SPAPI_GetInstrument\
+//,SPAPI_LoadProductInfoListByCode\
+//,SPAPI_GetProduct
 
 #include "node_addon.h"
 

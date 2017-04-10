@@ -674,26 +674,31 @@ inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 //	cout << "j=" << j.dump(4) << endl;
 //	printf("\n Instrument Count:%d",  apiInstList.size());
 //}METHOD_END(SPAPI_GetInstrument)
-//,SPAPI_LoadProductInfoListByCode\
-//METHOD_START(SPAPI_LoadProductInfoListByCode){
-//
-//	HANDLE_JS_PARAM_STR(inst_code,64);
-//	rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
-//	FILL_RS_STR(inst_code)
-//}METHOD_END(SPAPI_LoadProductInfoListByCode)
-//,SPAPI_GetProduct
-//METHOD_START(SPAPI_GetProduct){
-//
-//	//TODO return a V8 Array...
-//	vector<SPApiProduct> apiProdList;
-//	apiProxyWrapper.SPAPI_GetProduct(apiProdList);
-//	for (int i = 0; i < apiProdList.size(); i++) {
-//		SPApiProduct& prod = apiProdList[i];
-//		printf("\n Number:%d  ProdCode=%s , ProdName=%s , InstCode=%s ",i+1, prod.ProdCode, prod.ProdName, prod.InstCode);
-//	}
-//	printf("\n Product Count:%d",  apiProdList.size());
-//
-//}METHOD_END(SPAPI_GetProduct)
+
+inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
+	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
+	json out;
+	out["inst_code"]=inst_code;
+	my_data->out=out;
+}
+
+inline void SPAPI_GetProduct(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
+	vector<SPApiProduct> apiProdList;
+	my_data->rc = apiProxyWrapper.SPAPI_GetProduct(apiProdList);
+	json out;
+	for (int i = 0; i < apiProdList.size(); i++) {
+		SPApiProduct& prod = apiProdList[i];
+		out[i+1]["ProdCode"]=prod.ProdCode;
+		out[i+1]["ProdName"]=prod.ProdName;
+		out[i+1]["InstCode"]=prod.InstCode;
+		//printf("\n Number:%d  ProdCode=%s , ProdName=%s , InstCode=%s ",i+1, prod.ProdCode, prod.ProdName, prod.InstCode);
+	}
+	my_data->out=out;
+}
 void worker_for_call(uv_work_t * req){
 	// This method will run in a seperate thread where you can do your blocking background work.
 	// NOTES: In this function, you cannot access any V8/node js valiables
@@ -703,14 +708,20 @@ void worker_for_call(uv_work_t * req){
 	json rst;
 	rst["api"]=api;
 	rst["in"]=in;
-	if(api=="SPAPI_GetDllVersion"){
-		SPAPI_GetDllVersion(my_data);
-	}else if(api=="SPAPI_GetLoginStatus"){
+	if(api=="SPAPI_GetLoginStatus"){
 		SPAPI_GetLoginStatus(my_data);
+	}else if(api=="SPAPI_GetProduct"){
+		SPAPI_GetProduct(my_data);
+	}else if(api=="SPAPI_LoadProductInfoListByCode"){
+		SPAPI_LoadProductInfoListByCode(my_data);
+	}else if(api=="SPAPI_GetDllVersion"){
+		SPAPI_GetDllVersion(my_data);
 	}else if(api=="SPAPI_SetLoginInfo"){
 		SPAPI_SetLoginInfo(my_data);
 	}else if(api=="SPAPI_Login"){
 		SPAPI_Login(my_data);
+	}else if(api=="SPAPI_LoadInstrumentList"){
+		SPAPI_LoadInstrumentList(my_data);
 	}else{
 		json out;
 		out["STS"]="KO";

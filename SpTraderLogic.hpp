@@ -606,7 +606,6 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	vector<SPApiInstrument> apiInstList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
 	json out;
-	//TODO Macro SPApiInstrument_2_jsonout...
 	/* double Margin;
 		 double ContractSize;
 		 STR16 MarketCode; //市场代码
@@ -675,9 +674,7 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	vector<SPApiAccBal> apiAccBalList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
 	json out;
-	/* 帐户现金结余结构:
-		 typedef struct
-		 {
+	/* typedef struct {
 		 double CashBf; //上日结余
 		 double TodayCash; //今日存取
 		 double NotYetValue; //未交收
@@ -700,9 +697,66 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
-#define COPY_FIELD(from,to,fff) from[#to][#fff]=to.fff;
-#define COPY_out_2_acc_info(fff) COPY_FIELD(out,acc_info,fff);
-
+/* typedef struct {
+	 double NAV; //资产净值
+	 double BuyingPower; //购买力
+	 double CashBal; //现金结余
+	 double MarginCall; //追收金额
+	 double CommodityPL; //商品盈亏
+	 double LockupAmt; //冻结金额
+	 double CreditLimit; //信贷限额
+	 double MaxMargin; //最高保证金
+	 double MaxLoanLimit; //最高借贷上限
+	 double TradingLimit; //信用交易额
+	 double RawMargin; //原始保证金
+	 double IMargin; //基本保证金
+	 double MMargin; //维持保证金
+	 double TodayTrans; //交易金额
+	 double LoanLimit; //证券可按总值
+	 double TotalFee; //费用总额
+	 double LoanToMR //借贷/可按值%
+	 double LoanToMV //借贷/市值%
+	 STR16 AccName; //名称
+	 STR4 BaseCcy; //基本币种
+	 STR16 MarginClass; //保证金类别
+	 STR16 TradeClass; //交易额别
+	 STR16 ClientId; //客户
+	 STR16 AEId; // 经纪
+	 char AccType; //户口类别
+	 char CtrlLevel; //控制级数
+	 char Active; // 生效
+	 char MarginPeriod; //时段
+	 } SPApiAccInfo; */
+#define COPY_SPApiAccInfo_FIELDS(sss,ttt)\
+	ttt["NAV"]=sss.NAV;\
+	ttt["BuyingPower"]=sss.BuyingPower;\
+	ttt["CashBal"]=sss.CashBal;\
+	ttt["MarginCall"]=sss.MarginCall;\
+	ttt["CommodityPL"]=sss.CommodityPL;\
+	ttt["LockupAmt"]=sss.LockupAmt;\
+	ttt["CreditLimit"]=sss.CreditLimit;\
+	ttt["MaxMargin"]=sss.MaxMargin;\
+	ttt["MaxLoanLimit"]=sss.MaxLoanLimit;\
+	ttt["TradingLimit"]=sss.TradingLimit;\
+	ttt["RawMargin"]=sss.RawMargin;\
+	ttt["IMargin"]=sss.IMargin;\
+	ttt["MMargin"]=sss.MMargin;\
+	ttt["TodayTrans"]=sss.TodayTrans;\
+	ttt["LoanLimit"]=sss.LoanLimit;\
+	ttt["TotalFee"]=sss.TotalFee;\
+	ttt["LoanToMR"]=sss.LoanToMR;\
+	ttt["LoanToMV"]=sss.LoanToMV;\
+	ttt["AccName"]=sss.AccName;\
+	ttt["BaseCcy"]=sss.BaseCcy;\
+	ttt["MarginClass"]=sss.MarginClass;\
+	ttt["TradeClass"]=sss.TradeClass;\
+	ttt["ClientId"]=sss.ClientId;\
+	ttt["AEId"]=sss.AEId;\
+	ttt["AccType"]=sss.AccType;\
+	ttt["CtrlLevel"]=sss.CtrlLevel;\
+	ttt["Active"]=sss.Active;\
+	ttt["MarginPeriod"]=sss.MarginPeriod;\
+	ttt["AccNameUtf8"]=big2utf8(sss.AccName);
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -715,68 +769,7 @@ inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	if (rc == 0)
 	{
 		json out;
-		/* typedef struct {
-			 double NAV; //资产净值
-			 double BuyingPower; //购买力
-			 double CashBal; //现金结余
-			 double MarginCall; //追收金额
-			 double CommodityPL; //商品盈亏
-			 double LockupAmt; //冻结金额
-			 double CreditLimit; //信贷限额
-			 double MaxMargin; //最高保证金
-			 double MaxLoanLimit; //最高借贷上限
-			 double TradingLimit; //信用交易额
-			 double RawMargin; //原始保证金
-			 double IMargin; //基本保证金
-			 double MMargin; //维持保证金
-			 double TodayTrans; //交易金额
-			 double LoanLimit; //证券可按总值
-			 double TotalFee; //费用总额
-			 double LoanToMR //借贷/可按值%
-			 double LoanToMV //借贷/市值%
-			 STR16 AccName; //名称
-			 STR4 BaseCcy; //基本币种
-			 STR16 MarginClass; //保证金类别
-			 STR16 TradeClass; //交易额别
-			 STR16 ClientId; //客户
-			 STR16 AEId; // 经纪
-			 char AccType; //户口类别
-			 char CtrlLevel; //控制级数
-			 char Active; // 生效
-			 char MarginPeriod; //时段
-			 } SPApiAccInfo; */
-		
-		//COPY_FIELD(out,acc_info,NAV);
-		ITR(COPY_out_2_acc_info,EXPAND(
-					NAV,
-					BuyingPower,
-					CashBal,
-					MarginCall,
-					CommodityPL,
-					LockupAmt,
-					CreditLimit,
-					MaxMargin,
-					MaxLoanLimit,
-					TradingLimit,
-					RawMargin,
-					IMargin,
-					TodayTrans,
-					LoanLimit,
-					TotalFee,
-					LoanToMR,
-					LoanToMV,
-					AccName,
-					BaseCcy,
-					MarginClass,
-					TradeClass,
-					ClientId,
-					AEId,
-					AccType,
-					CtrlLevel,
-					Active,
-					MarginPeriod,
-					));
-		out["acc_info"]["AccNameUtf8"]=big2utf8(acc_info.AccName);
+		COPY_SPApiAccInfo_FIELDS(acc_info,out["acc_info"])
 		my_data->out=out;
 	}
 }
@@ -803,7 +796,6 @@ inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 	out["inst_code"]=inst_code;
 	my_data->out=out;
 }
-
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
 std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 	ITR(DFN_FNC_PTR,EXPAND(
@@ -816,7 +808,9 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_Logout,//1.6
 				//SPAPI_ChangePassword,//1.7
 				SPAPI_GetLoginStatus,//1.8
-				//SPAPI_AddOrder,//1.9
+
+				//下单相关：{ TODO
+				//SPAPI_AddOrder,//1.9 TODO
 				//SPAPI_AddInactiveOrder,//1.10
 				//SPAPI_ChangeOrder,//1.11
 				//SPAPI_ChangeOrderBy,//1.12
@@ -831,39 +825,54 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_InactivateOrderBy,//1.21
 				//SPAPI_InactivateAllOrders,//1.22
 				//SPAPI_SendMarketMakingOrder,//1.23
-				//SPAPI_GetPosCount,//1.24
-				//SPAPI_GetAllPos,//1.25
-				//SPAPI_GetAllPosByArray,//1.26
-				//SPAPI_GetPosByProduct,//1.27
-				//SPAPI_GetTradeCount,//1.28
-				//SPAPI_GetAllTrades,//1.29
-				//SPAPI_GetAllTradeByArray,//1.30
-				//SPAPI_SubscribePrice,//1.31
-				//SPAPI_GetPriceByCode,//1.32
+				//下单相关：}
+
+				//持仓相关：{
+				//SPAPI_GetPosCount,//1.24 TODO
+				//SPAPI_GetAllPos,//1.25 TODO
+				//SPAPI_GetAllPosByArray,//1.26 TODO
+				//SPAPI_GetPosByProduct,//1.27 TODO
+				//持仓相关：}
+
+				//成交相关：{
+				//SPAPI_GetTradeCount,//1.28 TODO
+				//SPAPI_GetAllTrades,//1.29 TODO
+				//SPAPI_GetAllTradeByArray,//1.30 TODO
+				//成交相关：}
+
+				//行情相关：{
+				//SPAPI_SubscribePrice,//1.31 暂时我们不需要订阅，先用下面的 SPAPI_GetPriceByCode 足够做 v0.0.1
+				//SPAPI_GetPriceByCode,//1.32 TODO 重要
+				//行情相关：}
+
+				//产品相关：{
 		SPAPI_LoadInstrumentList,//1.33
 		SPAPI_GetInstrumentCount,//1.34
 		SPAPI_GetInstrument,//1.35
-		//SPAPI_GetInstrumentByArray,//1.36
-		//SPAPI_GetInstrumentByCode,//1.37
-		//SPAPI_GetProductCount,//1.38
+		//SPAPI_GetInstrumentByArray,//1.36 暂时没用
+		//SPAPI_GetInstrumentByCode,//1.37 暂时没用
+		//SPAPI_GetProductCount,//1.38 TODO
 		SPAPI_GetProduct,//1.39
-		//SPAPI_GetProductByArray,//1.40
+		//SPAPI_GetProductByArray,//1.40 暂时没用
 		SPAPI_GetProductByCode,//1.41
+		//产品相关：}
+
+		//以下为帐号及其它：
 		SPAPI_GetAccBalCount,//1.42 //获取现金结余的数量
 		SPAPI_GetAllAccBal,//1.43,注：此方法如果是AE登入需要AccountLogin一个客户才能取客户数据.
-		//SPAPI_GetAllAccBalByArray,//1.44
-		//SPAPI_GetAccBalByCurrency,//1.45
-		//SPAPI_SubscribeTicker,//1.46
+		//SPAPI_GetAllAccBalByArray,//1.44 暂时没用
+		//SPAPI_GetAccBalByCurrency,//1.45 暂时没用
+		//SPAPI_SubscribeTicker,//1.46 TODO
 		//SPAPI_SubscribeQuoteRequest,//1.47 TODO
-		//SPAPI_SubscribeAllQuoteRequest,//1.48
+		//SPAPI_SubscribeAllQuoteRequest,//1.48 TODO
 		SPAPI_GetAccInfo,//1.49
 		SPAPI_GetDllVersion,//1.50
 		SPAPI_LoadProductInfoListByCode,//1.51
-		//SPAPI_SetApiLogPath,//1.52
-		//SPAPI_GetCcyRateByCcy,//1.53
+		//SPAPI_SetApiLogPath,//1.52 暂时没用
+		//SPAPI_GetCcyRateByCcy,//1.53 暂时没用
 		//SPAPI_AccountLogin,//1.54 该方法只针对AE,当AE登录后可选择性登录账户
-		//SPAPI_AccountLogout,//1.55
-		//SPAPI_SendAccControl,//1.56
+		//SPAPI_AccountLogout,//1.55 暂时没用
+		//SPAPI_SendAccControl,//1.56 暂时没用
 		))
 };
 void worker_for_call(uv_work_t * req){
@@ -875,7 +884,6 @@ void worker_for_call(uv_work_t * req){
 	json rst;
 	rst["api"]=api;
 	rst["in"]=in;
-
 	void (*fcnPtr)(ShareDataCall * my_data) = _apiDict[api];
 	if(NULL!=fcnPtr){
 		fcnPtr(my_data);
@@ -900,7 +908,6 @@ void after_worker_for_call(uv_work_t * req,int status){
 	}
 	delete my_data;
 }
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 METHOD_START_ONCALL(on){
 	HANDLE_JS_ARG_TO_STR(args[0],on,64);
@@ -908,7 +915,6 @@ METHOD_START_ONCALL(on){
 		_callback_map[string(on)].Reset(isolate, callback);
 	}
 }METHOD_END_ONCALL(on)
-
 /**
  * call(m,callback) and return in/out/rc
  * async mode if has(callback),using async mode as much as possible, 'coz sync mode might block the nodejs
@@ -934,34 +940,9 @@ METHOD_START_ONCALL(call){
 		}
 	}
 }METHOD_END_ONCALL(call)
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
 //char* ToCString(const String::Utf8Value& value){
 //	char* rt=(char*) (*value ? *value : "<string conversion failed>");
 //	return rt;
 //}
-//#define FILL_RC_INT(field)\
-//	rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,field));
-//#define FILL_RS_STR(field)\
-//	out->Set(String::NewFromUtf8(isolate,#field), String::NewFromUtf8(isolate,field));
-//#define HANDLE_JS_ARGS_STR(aaa,kkk,len)\
-//	Local<String> in_##kkk = Local<String>::Cast(aaa);\
-//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
-//	char kkk[len]={0};\
-//	V8ToCharPtr(in_##kkk,kkk);
-//#define HANDLE_JS_PARAM_STR(kkk,len)\
-//	Local<Value> in_##kkk=in->Get(String::NewFromUtf8(isolate,#kkk));\
-//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
-//	char kkk[len]={0};\
-//	V8ToCharPtr(in_##kkk,kkk);
-//#define HANDLE_JS_PARAM_INT(kkk)\
-//	Local<Value> in_##kkk=in->Get(String::NewFromUtf8(isolate,#kkk));\
-//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
-//	int kkk;\
-//	if(in_##kkk->IsNumber()){\
-//		Local<Number> tmp_##kkk= Local<Number>::Cast(in_##kkk);\
-//		kkk=0+tmp_##kkk->NumberValue();\
-//		rt->Set(String::NewFromUtf8(isolate,#kkk), Integer::New(isolate,kkk));\
-//	}
-

@@ -25,7 +25,10 @@ pwd
 npm install segfault-handler bson q
 npm list
 
+#cp -Rf node_modules/* ../sptrader_api_server/node_modules/
 cd ../sptrader_api_server/
-npm install segfault-handler bson q
-npm list
+ls -al
+cp -Rf ../sptrader/node_modules/* ./node_modules/
+#npm install segfault-handler bson q
+#npm list
 

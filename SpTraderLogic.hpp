@@ -559,10 +559,6 @@ struct ShareDataCall
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
-//1.5
-inline void SPAPI_Login(ShareDataCall * my_data){
-	my_data->rc = apiProxyWrapper.SPAPI_Login();
-}
 //1.4
 inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -575,22 +571,17 @@ inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
 	apiProxyWrapper.SPAPI_SetLoginInfo(host, port, license, app_id, user_id, password);
 	my_data->rc =0;
 }
+//1.5
+inline void SPAPI_Login(ShareDataCall * my_data){
+	my_data->rc = apiProxyWrapper.SPAPI_Login();
+}
 //1.6
 inline void SPAPI_Logout(ShareDataCall * my_data){
-}
-inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 	json in=my_data->in;
-	//char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
-	HANDLE_IN_TO_STR(in["ver_no"],ver_no,100);
-	HANDLE_IN_TO_STR(in["rel_no"],rel_no,100);
-	HANDLE_IN_TO_STR(in["suffix"],suffix,100);
-	my_data->rc = apiProxyWrapper.SPAPI_GetDllVersion(ver_no, rel_no, suffix);
-	json out;
-	out["ver_no"]=ver_no;
-	out["rel_no"]=rel_no;
-	out["suffix"]=suffix;
-	my_data->out=out;
+	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	my_data->rc = apiProxyWrapper.SPAPI_Logout(user_id);
 }
+//1.8
 inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	json in=my_data->in;
 	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
@@ -601,6 +592,7 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	//out["host_id"]=host_id;
 	//my_data->out=out;
 }
+//1.33
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
@@ -633,9 +625,12 @@ inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 //		//printf("\nAccInfo: AccName>>>Chinese simplified: %s", str.c_str());
 //	}
 //}METHOD_END(SPAPI_GetAccInfo)
+////1.34
+//1.34
 inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
 }
+//1.35
 inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	json in=my_data->in;
 	vector<SPApiInstrument> apiInstList;
@@ -668,14 +663,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
-inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
-	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
-	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
-	json out;
-	out["inst_code"]=inst_code;
-	my_data->out=out;
-}
+//1.39
 inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json in=my_data->in;
 	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
@@ -691,17 +679,91 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
+//1.50
+inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
+	json in=my_data->in;
+	//char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
+	HANDLE_IN_TO_STR(in["ver_no"],ver_no,100);
+	HANDLE_IN_TO_STR(in["rel_no"],rel_no,100);
+	HANDLE_IN_TO_STR(in["suffix"],suffix,100);
+	my_data->rc = apiProxyWrapper.SPAPI_GetDllVersion(ver_no, rel_no, suffix);
+	json out;
+	out["ver_no"]=ver_no;
+	out["rel_no"]=rel_no;
+	out["suffix"]=suffix;
+	my_data->out=out;
+}
+//1.51
+inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
+	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
+	json out;
+	out["inst_code"]=inst_code;
+	my_data->out=out;
+}
+
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
 std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 	ITR(DFN_FNC_PTR,EXPAND(
-				SPAPI_SetLoginInfo,
-				SPAPI_Login,
-				SPAPI_LoadInstrumentList,
-				SPAPI_GetInstrument,
-				SPAPI_LoadProductInfoListByCode,
-				SPAPI_GetProduct,
-				SPAPI_GetLoginStatus,
-				SPAPI_GetDllVersion))
+				//API 20161216:
+				//SPAPI_Initialize,//1.1
+				//SPAPI_Uninitialize,//1.2
+				//SPAPI_SetLanguageId,//1.3
+				SPAPI_SetLoginInfo,//1.4
+				SPAPI_Login,//1.5
+				SPAPI_Logout,//1.6
+				//SPAPI_ChangePassword,//1.7
+				SPAPI_GetLoginStatus,//1.8
+				//SPAPI_AddOrder,//1.9
+				//SPAPI_AddInactiveOrder,//1.10
+				//SPAPI_ChangeOrder,//1.11
+				//SPAPI_ChangeOrderBy,//1.12
+				//SPAPI_GetOrderByOrderNo,//1.13
+				//SPAPI_GetOrderCount,//1.14
+				//SPAPI_GetActiveOrder,//1.15
+				//SPAPI_GetOrdersByArray,//1.16
+				//SPAPI_DeleteOrderBy,//1.17
+				//SPAPI_DeleteAllOrders,//1.18
+				//SPAPI_ActivateOrderBy,//1.19
+				//SPAPI_ActivateAllOrderOrders,//1.20
+				//SPAPI_InactivateOrderBy,//1.21
+				//SPAPI_InactivateAllOrders,//1.22
+				//SPAPI_SendMarketMakingOrder,//1.23
+				//SPAPI_GetPosCount,//1.24
+				//SPAPI_GetAllPos,//1.25
+				//SPAPI_GetAllPosByArray,//1.26
+				//SPAPI_GetPosByProduct,//1.27
+				//SPAPI_GetTradeCount,//1.28
+				//SPAPI_GetAllTrades,//1.29
+				//SPAPI_GetAllTradeByArray,//1.30
+				//SPAPI_SubscribePrice,//1.31
+				//SPAPI_GetPriceByCode,//1.32
+		SPAPI_LoadInstrumentList,//1.33
+		SPAPI_GetInstrumentCount,//1.34
+		SPAPI_GetInstrument,//1.35
+		//SPAPI_GetInstrumentByArray,//1.36
+		//SPAPI_GetInstrumentByCode,//1.37
+		//SPAPI_GetProductCount,//1.38
+		SPAPI_GetProduct,//1.39
+		//SPAPI_GetProductByArray,//1.40
+		//SPAPI_GetProductByCode,//1.41
+		//SPAPI_GetAccBalCount,//1.42
+		//SPAPI_GetAllAccBal,//1.43
+		//SPAPI_GetAllAccBalByArray,//1.44
+		//SPAPI_GetAccBalByCurrency,//1.45
+		//SPAPI_SubscribeTicker,//1.46
+		//SPAPI_SubscribeQuoteRequest,//1.47
+		//SPAPI_SubscribeAllQuoteRequest,//1.48
+		//SPAPI_GetAccInfo,//1.49
+		SPAPI_GetDllVersion,//1.50
+		SPAPI_LoadProductInfoListByCode,//1.51
+		//SPAPI_SetApiLogPath,//1.52
+		//SPAPI_GetCcyRateByCcy,//1.53
+		//SPAPI_AccountLogin,//1.54
+		//SPAPI_AccountLogout,//1.55
+		//SPAPI_SendAccControl,//1.56
+		))
 };
 void worker_for_call(uv_work_t * req){
 	// This method will run in a seperate thread where you can do your blocking background work.

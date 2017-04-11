@@ -67,6 +67,7 @@ class SpTraderLogic : public ApiProxyWrapperReply
 //#include <ctype.h>//...
 //#include <time.h> //for localtime 
 //#include <node.h> //...
+#include <iconv.h> //for gbk/big5/utf8
 #include <uv.h> //uv_work_t uv_queue_work uv_default_loop
 #include "json.hpp" //https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp
 using json = nlohmann::json;
@@ -74,6 +75,57 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//string
 ApiProxyWrapper apiProxyWrapper;
+
+int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)  
+{  
+	iconv_t cd;  
+	int rc;  
+	char **pin = &inbuf;  
+	char **pout = &outbuf;  
+
+	cd = iconv_open(to_charset,from_charset);  
+	if (cd==0)  
+		return -1;  
+	memset(outbuf,0,outlen);  
+	
+	if (iconv(cd,pin,&inlen,pout,&outlen) == -1)  
+		return -1;  
+	iconv_close(cd);  
+	return 0;  
+}  
+
+//int u2g(char *inbuf,int inlen,char *outbuf,int outlen)  
+//{  
+//	return code_convert("utf-8","gb2312",inbuf,inlen,outbuf,outlen);  
+//}  
+//
+//int g2u(char *inbuf,size_t inlen,char *outbuf,size_t outlen)  
+//{  
+//	return code_convert("gb2312","utf-8",inbuf,inlen,outbuf,outlen);  
+//}
+//int gbk2utf8(char *inbuf,size_t inlen,char *outbuf,size_t outlen)  
+//{
+//	return code_convert("gbk","utf-8",inbuf,inlen,outbuf,outlen);  
+//}
+std::string gbk2utf8(std::string in)
+{
+	char* inbuf=(char*) in.c_str();
+	//int inlen=in.length()+1;
+	int inlen=strlen(inbuf);
+	int outlen=inlen*3;//in case unicode 3 times than ascii
+	char outbuf[outlen]={0};
+	int rst=code_convert("gbk","utf-8",inbuf,inlen,outbuf,outlen);  
+	if(rst==0){
+		return std::string(outbuf);
+	}else{
+		return in;
+	}
+}
+std::string gbk2utf8(const char* in)
+{
+	return gbk2utf8(std::string(in));
+}
+
 struct ShareDataOn //for on()
 {
 	uv_work_t request;//@ref uv_queue_work()
@@ -668,6 +720,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 		out[i]["InstName"]=inst.InstName;
 		out[i]["InstName1"]=inst.InstName1;//need fix the encoding
 		out[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
+		out[i]["InstName2u"]=gbk2utf8(inst.InstName2);
 		out[i]["Ccy"]=inst.Ccy;
 		out[i]["InstCode"]=inst.InstCode;
 		out[i]["InstType"]=inst.InstType;

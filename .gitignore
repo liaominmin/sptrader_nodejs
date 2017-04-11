@@ -2,3 +2,4 @@ build
 node-v7.8.0
 Log
 product
+*.log

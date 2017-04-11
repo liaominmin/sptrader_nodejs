@@ -649,6 +649,19 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
+//1.41
+inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["prod_code"],prod_code,64);
+	SPApiProduct prod;
+	memset(&prod, 0, sizeof(SPApiProduct));
+	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
+	json out;
+	out["ProdCode"]=prod.ProdCode;
+	out["ProdName"]=prod.ProdName;
+	out["InstCode"]=prod.InstCode;
+	my_data->out=out;
+}
 //1.42
 inline void SPAPI_GetAccBalCount(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -835,7 +848,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 		//SPAPI_GetProductCount,//1.38
 		SPAPI_GetProduct,//1.39
 		//SPAPI_GetProductByArray,//1.40
-		//SPAPI_GetProductByCode,//1.41
+		SPAPI_GetProductByCode,//1.41
 		SPAPI_GetAccBalCount,//1.42 //获取现金结余的数量
 		SPAPI_GetAllAccBal,//1.43,注：此方法如果是AE登入需要AccountLogin一个客户才能取客户数据.
 		//SPAPI_GetAllAccBalByArray,//1.44

@@ -660,10 +660,9 @@ inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 //METHOD_START(SPAPI_LoadInstrumentList){
 //	rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 //}METHOD_END(SPAPI_LoadInstrumentList)
-//,SPAPI_GetInstrumentCount\
-//METHOD_START(SPAPI_GetInstrumentCount){
-//	rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
-//}METHOD_END(SPAPI_GetInstrumentCount)
+inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
+	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
+}
 inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	json in=my_data->in;
 	vector<SPApiInstrument> apiInstList;
@@ -694,37 +693,6 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
-
-//METHOD_START(SPAPI_GetInstrument){
-//	vector<SPApiInstrument> apiInstList;
-//	apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
-//	json j;
-//	for (int i = 0; i < apiInstList.size(); i++) {
-//		SPApiInstrument& inst = apiInstList[i];
-//		j[i]["MarketCode"]=inst.MarketCode;
-//		j[i]["InstName"]=inst.InstName;
-//		j[i]["InstName1"]=inst.InstName1;//need fix the encoding
-//		j[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
-//		j[i]["Ccy"]=inst.Ccy;
-//		j[i]["InstCode"]=inst.InstCode;
-//		j[i]["InstType"]=inst.InstType;
-//		/*
-//			 double Margin;
-//			 double ContractSize;
-//			 STR16 MarketCode; //市场代码
-//			 STR16 InstCode; //产品系列代码
-//			 STR40 InstName; //英文名称
-//			 STR40 InstName1; //繁体名称
-//			 STR40 InstName2; //简体名称
-//			 STR4 Ccy; //产品系列的交易币种
-//			 char DecInPrice; //产品系列的小数位
-//			 char InstType; //产品系列的类型
-//			 */
-//	}
-//	cout << "j=" << j.dump(4) << endl;
-//	printf("\n Instrument Count:%d",  apiInstList.size());
-//}METHOD_END(SPAPI_GetInstrument)
-
 inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 	json in=my_data->in;
 	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
@@ -733,7 +701,6 @@ inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 	out["inst_code"]=inst_code;
 	my_data->out=out;
 }
-
 inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json in=my_data->in;
 	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
@@ -749,6 +716,19 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
+
+std::map<std::string,void(*)(ShareDataCall*my_data)>apiDict{
+	{"SPAPI_GetLoginStatus",SPAPI_GetLoginStatus},
+		{"SPAPI_SetLoginInfo",SPAPI_SetLoginInfo},
+		{"SPAPI_Login",SPAPI_Login},
+		{"SPAPI_LoadInstrumentList",SPAPI_LoadInstrumentList},
+		{"SPAPI_GetInstrument",SPAPI_GetInstrument},
+		{"SPAPI_LoadProductInfoListByCode",SPAPI_LoadProductInfoListByCode},
+		{"SPAPI_GetProduct",SPAPI_GetProduct},
+		{"SPAPI_GetLoginStatus",SPAPI_GetLoginStatus},
+		{"SPAPI_GetDllVersion",SPAPI_GetDllVersion},
+};
+
 void worker_for_call(uv_work_t * req){
 	// This method will run in a seperate thread where you can do your blocking background work.
 	// NOTES: In this function, you cannot access any V8/node js valiables
@@ -758,22 +738,10 @@ void worker_for_call(uv_work_t * req){
 	json rst;
 	rst["api"]=api;
 	rst["in"]=in;
-	if(api=="SPAPI_GetLoginStatus"){
-		SPAPI_GetLoginStatus(my_data);
-	}else if(api=="SPAPI_GetProduct"){
-		SPAPI_GetProduct(my_data);
-	}else if(api=="SPAPI_LoadProductInfoListByCode"){
-		SPAPI_LoadProductInfoListByCode(my_data);
-	}else if(api=="SPAPI_GetDllVersion"){
-		SPAPI_GetDllVersion(my_data);
-	}else if(api=="SPAPI_GetInstrument"){
-		SPAPI_GetInstrument(my_data);
-	}else if(api=="SPAPI_SetLoginInfo"){
-		SPAPI_SetLoginInfo(my_data);
-	}else if(api=="SPAPI_Login"){
-		SPAPI_Login(my_data);
-	}else if(api=="SPAPI_LoadInstrumentList"){
-		SPAPI_LoadInstrumentList(my_data);
+
+	void (*fcnPtr)(ShareDataCall * my_data) = apiDict[api];
+	if(NULL!=fcnPtr){
+		fcnPtr(my_data);
 	}else{
 		json out;
 		out["STS"]="KO";

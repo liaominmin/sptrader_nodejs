@@ -22,7 +22,10 @@ cd $(dirname "$0")
 pwd
 
 # echo build segfault-handler
-npm install segfault-handler
+npm install segfault-handler bson q
+npm list
 
 cd ../sptrader_api_server/
-npm install segfault-handler
+npm install segfault-handler bson q
+npm list
+

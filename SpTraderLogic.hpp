@@ -65,9 +65,8 @@ class SpTraderLogic : public ApiProxyWrapperReply
 #include <stdio.h>
 //#include <unistd.h>//...
 //#include <ctype.h>//...
-//#include <time.h> //for localtime 
+//#include <time.h> //for localtime
 //#include <node.h> //...
-#include <iconv.h> //for gbk/big5/utf8
 #include <uv.h> //uv_work_t uv_queue_work uv_default_loop
 #include "json.hpp" //https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp
 using json = nlohmann::json;
@@ -76,45 +75,29 @@ using json = nlohmann::json;
 using namespace std;//string
 ApiProxyWrapper apiProxyWrapper;
 
-int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)  
-{  
-	iconv_t cd;  
-	int rc;  
-	char **pin = &inbuf;  
-	char **pout = &outbuf;  
-
-	cd = iconv_open(to_charset,from_charset);  
-	if (cd==0)  
-		return -1;  
-	memset(outbuf,0,outlen);  
-	
-	if (iconv(cd,pin,&inlen,pout,&outlen) == -1)  
-		return -1;  
-	iconv_close(cd);  
-	return 0;  
-}  
-
-//int u2g(char *inbuf,int inlen,char *outbuf,int outlen)  
-//{  
-//	return code_convert("utf-8","gb2312",inbuf,inlen,outbuf,outlen);  
-//}  
-//
-//int g2u(char *inbuf,size_t inlen,char *outbuf,size_t outlen)  
-//{  
-//	return code_convert("gb2312","utf-8",inbuf,inlen,outbuf,outlen);  
-//}
-//int gbk2utf8(char *inbuf,size_t inlen,char *outbuf,size_t outlen)  
-//{
-//	return code_convert("gbk","utf-8",inbuf,inlen,outbuf,outlen);  
-//}
-std::string gbk2utf8(std::string in)
+#include <iconv.h> //for gbk/big5/utf8
+int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
+{
+	iconv_t cd;
+	int rc;
+	char **pin = &inbuf;
+	char **pout = &outbuf;
+	cd = iconv_open(to_charset,from_charset);
+	if (cd==0)
+		return -1;
+	memset(outbuf,0,outlen);
+	if (iconv(cd,pin,&inlen,pout,&outlen) == -1)
+		return -1;
+	iconv_close(cd);
+	return 0;
+}
+std::string any2utf8(std::string in,std::string fromEncode,std::string toEncode)
 {
 	char* inbuf=(char*) in.c_str();
-	//int inlen=in.length()+1;
 	int inlen=strlen(inbuf);
 	int outlen=inlen*3;//in case unicode 3 times than ascii
 	char outbuf[outlen]={0};
-	int rst=code_convert("gbk","utf-8",inbuf,inlen,outbuf,outlen);  
+	int rst=code_convert((char*)fromEncode.c_str(),(char*)toEncode.c_str(),inbuf,inlen,outbuf,outlen);
 	if(rst==0){
 		return std::string(outbuf);
 	}else{
@@ -123,7 +106,7 @@ std::string gbk2utf8(std::string in)
 }
 std::string gbk2utf8(const char* in)
 {
-	return gbk2utf8(std::string(in));
+	return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8"));
 }
 
 struct ShareDataOn //for on()
@@ -132,7 +115,7 @@ struct ShareDataOn //for on()
 	json j_rt;//the data to send back
 	string strCallback;//the name of the callback
 };
-map<string, v8::Persistent<v8::Function> > _callback_map; 
+map<string, v8::Persistent<v8::Function> > _callback_map;
 void worker_for_on(uv_work_t * req){}
 void after_worker_for_on(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
@@ -146,12 +129,103 @@ void after_worker_for_on(uv_work_t * req,int status){
 	}
 	delete my_data;
 }
+//conert v8 string to char* (for sptrader api)
+inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
+	const String::Utf8Value value(v8v);
+	const char* rt0=(*value ? *value : "<string conversion failed>");
+	strcpy(rt,rt0);
+}
+//ref:
+//https://github.com/pmed/v8pp/blob/2e0c25ebe6f478bc4ab706d6878c6b6451ba1c7e/v8pp/json.hpp
+inline std::string json_stringify(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+{
+	if (value.IsEmpty()) { return std::string("null"); }
+	v8::HandleScope handle_scope(isolate);
+	v8::Local<v8::Object> theJSON = isolate->GetCurrentContext()->
+		Global()->Get(v8::String::NewFromUtf8(isolate, "JSON"))->ToObject();
+	v8::Local<v8::Function> stringify = theJSON->Get(
+			v8::String::NewFromUtf8(isolate, "stringify")).As<v8::Function>();
+	v8::Local<v8::Value> result = stringify->Call(theJSON, 1, &value);
+	v8::String::Utf8Value const str(result);
+	std::string rt=std::string(*str, str.length());
+	if(rt=="undefined") return std::string("null");//patch by wjc
+	return rt;
+}
+inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str)
+{
+	if (str.empty()) { return v8::Handle<v8::Value>(); }
+	v8::EscapableHandleScope scope(isolate);
+	v8::Local<v8::Object> theJSON = isolate->GetCurrentContext()->
+		Global()->Get(v8::String::NewFromUtf8(isolate, "JSON"))->ToObject();
+	v8::Local<v8::Function> parse = theJSON->Get(
+			v8::String::NewFromUtf8(isolate, "parse")).As<v8::Function>();
+	v8::Local<v8::Value> value = v8::String::NewFromUtf8(isolate, str.data(),
+			v8::String::kNormalString, static_cast<int>(str.size()));
+	v8::TryCatch try_catch;
+	v8::Local<v8::Value> result = parse->Call(theJSON, 1, &value);
+	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
+	return scope.Escape(result);
+}
+#define HANDLE_JS_ARG_TO_STR(aaa,kkk,len)\
+	Local<String> in_##kkk = Local<String>::Cast(aaa);\
+	char kkk[len]={0};\
+	V8ToCharPtr(in_##kkk,kkk);
+
+#define HANDLE_IN_TO_INT(aaa,kkk)\
+	int kkk=0;\
+	if(aaa.is_number_integer()){ kkk=aaa; }
+#define HANDLE_IN_TO_STR(aaa,kkk,len)\
+	char kkk[len]={0};\
+	if(aaa.is_string()){\
+		string str_in_##kkk=aaa;\
+		strcpy(kkk,str_in_##kkk.c_str());\
+	}
+#define METHOD_START_ONCALL($methodname)\
+	void SpTraderLogic::$methodname(const FunctionCallbackInfo<Value>& args) {\
+		int args_len=args.Length();\
+		Isolate* isolate = args.GetIsolate();\
+		Local<Object> rt= Object::New(isolate);\
+		Local<Object> out= Object::New(isolate);\
+		Local<Object> in = Object::New(isolate);\
+		Local<Function> callback;\
+		if (args.Length()>0){\
+			if(args[args_len-1]->IsFunction()){\
+				callback = Local<Function>::Cast(args[args_len-1]);\
+				if(args_len>2){\
+					in = Local<Object>::Cast(args[args_len-2]);\
+				}\
+			}else{\
+				if(args_len>1){\
+					in = Local<Object>::Cast(args[args_len-1]);\
+				}\
+			}\
+		}\
+		int rc=0;
+
+#define METHOD_END_ONCALL($methodname)\
+		rt->Set(String::NewFromUtf8(isolate,"api"), String::NewFromUtf8(isolate,#$methodname));\
+		rt->Set(String::NewFromUtf8(isolate,"in"), in);\
+		rt->Set(String::NewFromUtf8(isolate,"out"), out);\
+		rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,rc));\
+		args.GetReturnValue().Set(rt);\
+	}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+SpTraderLogic::SpTraderLogic(void){
+	apiProxyWrapper.SPAPI_Initialize();
+	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
+}
+SpTraderLogic::~SpTraderLogic(void){
+	//apiProxyWrapper.SPAPI_Logout(user_id);
+	//apiProxyWrapper.SPAPI_Uninitialize();
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	ShareDataOn * req_data = new ShareDataOn;\
 	req_data->strCallback=string(#$callbackName);\
 	req_data->request.data = req_data;\
 	req_data->j_rt=$jsonData;\
-	uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_on,after_worker_for_on); 
+	uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_on,after_worker_for_on);
 //0
 void SpTraderLogic::OnTest()
 {
@@ -245,7 +319,7 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 {
 	struct tm *tblock;
-	time_t TheTime = trade->TradeTime;   
+	time_t TheTime = trade->TradeTime;
 	tblock = localtime(&TheTime);
 	//wjc.tmp
 	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
@@ -267,13 +341,13 @@ void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
 {
 	struct tm *tblock;
-	time_t TheTime = trade->TradeTime;   
+	time_t TheTime = trade->TradeTime;
 	tblock = localtime(&TheTime);
 	//wjc
 	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
 	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
 	cout <<" trade_qty=" << trade->Qty << endl;
-	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;   
+	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;
 	json j;
 	j["trade"]["IntOrderNo"]=trade->IntOrderNo;
 	j["trade"]["TradeNo"]=trade->TradeNo;
@@ -425,7 +499,7 @@ void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
 	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
 	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
 	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
-	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;    
+	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;
 	json j;
 	j["p_qty"]=p_qty;
 	j["pos"]["TotalAmt"]=pos->TotalAmt;
@@ -472,114 +546,7 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALLBACK_FOR_ON(AccountControlReply,j);
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
-//char* ToCString(const String::Utf8Value& value){
-//	char* rt=(char*) (*value ? *value : "<string conversion failed>");
-//	return rt;
-//}
-//conert v8 string to char* (for sptrader api)
-inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
-	const String::Utf8Value value(v8v);
-	const char* rt0=(*value ? *value : "<string conversion failed>");
-	strcpy(rt,rt0);
-}
-//ref:
-//https://github.com/pmed/v8pp/blob/2e0c25ebe6f478bc4ab706d6878c6b6451ba1c7e/v8pp/json.hpp
-inline std::string json_stringify(v8::Isolate* isolate, v8::Handle<v8::Value> value)
-{
-	if (value.IsEmpty()) { return std::string("null"); }
-	v8::HandleScope handle_scope(isolate);
-	v8::Local<v8::Object> theJSON = isolate->GetCurrentContext()->
-		Global()->Get(v8::String::NewFromUtf8(isolate, "JSON"))->ToObject();
-	v8::Local<v8::Function> stringify = theJSON->Get(
-			v8::String::NewFromUtf8(isolate, "stringify")).As<v8::Function>();
-	v8::Local<v8::Value> result = stringify->Call(theJSON, 1, &value);
-	v8::String::Utf8Value const str(result);
-	std::string rt=std::string(*str, str.length());
-	if(rt=="undefined") return std::string("null");//patch by wjc
-	return rt;
-}
-inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const& str)
-{
-	if (str.empty()) { return v8::Handle<v8::Value>(); }
-	v8::EscapableHandleScope scope(isolate);
-	v8::Local<v8::Object> theJSON = isolate->GetCurrentContext()->
-		Global()->Get(v8::String::NewFromUtf8(isolate, "JSON"))->ToObject();
-	v8::Local<v8::Function> parse = theJSON->Get(
-			v8::String::NewFromUtf8(isolate, "parse")).As<v8::Function>();
-	v8::Local<v8::Value> value = v8::String::NewFromUtf8(isolate, str.data(),
-			v8::String::kNormalString, static_cast<int>(str.size()));
-	v8::TryCatch try_catch;
-	v8::Local<v8::Value> result = parse->Call(theJSON, 1, &value);
-	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
-	return scope.Escape(result);
-}
-#define FILL_RC_INT(field)\
-	rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,field));
-#define FILL_RS_STR(field)\
-	out->Set(String::NewFromUtf8(isolate,#field), String::NewFromUtf8(isolate,field));
-#define HANDLE_IN_TO_INT(aaa,kkk)\
-	int kkk=0;\
-	if(aaa.is_number_integer()){ kkk=aaa; }
-#define HANDLE_IN_TO_STR(aaa,kkk,len)\
-	char kkk[len]={0};\
-	if(aaa.is_string()){\
-		string str_in_##kkk=aaa;\
-		strcpy(kkk,str_in_##kkk.c_str());\
-	}
-#define HANDLE_JS_ARG_TO_STR(aaa,kkk,len)\
-	Local<String> in_##kkk = Local<String>::Cast(aaa);\
-	char kkk[len]={0};\
-	V8ToCharPtr(in_##kkk,kkk);
-//#define HANDLE_JS_ARGS_STR(aaa,kkk,len)\
-//	Local<String> in_##kkk = Local<String>::Cast(aaa);\
-//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
-//	char kkk[len]={0};\
-//	V8ToCharPtr(in_##kkk,kkk);
-//#define HANDLE_JS_PARAM_STR(kkk,len)\
-//	Local<Value> in_##kkk=in->Get(String::NewFromUtf8(isolate,#kkk));\
-//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
-//	char kkk[len]={0};\
-//	V8ToCharPtr(in_##kkk,kkk);
-//#define HANDLE_JS_PARAM_INT(kkk)\
-//	Local<Value> in_##kkk=in->Get(String::NewFromUtf8(isolate,#kkk));\
-//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
-//	int kkk;\
-//	if(in_##kkk->IsNumber()){\
-//		Local<Number> tmp_##kkk= Local<Number>::Cast(in_##kkk);\
-//		kkk=0+tmp_##kkk->NumberValue();\
-//		rt->Set(String::NewFromUtf8(isolate,#kkk), Integer::New(isolate,kkk));\
-//	}
-#define METHOD_START_ONCALL($methodname)\
-	void SpTraderLogic::$methodname(const FunctionCallbackInfo<Value>& args) {\
-		int args_len=args.Length();\
-		Isolate* isolate = args.GetIsolate();\
-		Local<Object> rt= Object::New(isolate);\
-		Local<Object> out= Object::New(isolate);\
-		Local<Object> in = Object::New(isolate);\
-		Local<Function> callback;\
-		if (args.Length()>0){\
-			if(args[args_len-1]->IsFunction()){\
-				callback = Local<Function>::Cast(args[args_len-1]);\
-				if(args_len>2){\
-					in = Local<Object>::Cast(args[args_len-2]);\
-				}\
-			}else{\
-				if(args_len>1){\
-					in = Local<Object>::Cast(args[args_len-1]);\
-				}\
-			}\
-		}\
-		int rc=0;
 
-#define METHOD_END_ONCALL($methodname)\
-		rt->Set(String::NewFromUtf8(isolate,"api"), String::NewFromUtf8(isolate,#$methodname));\
-		rt->Set(String::NewFromUtf8(isolate,"in"), in);\
-		rt->Set(String::NewFromUtf8(isolate,"out"), out);\
-		FILL_RC_INT(rc);\
-		args.GetReturnValue().Set(rt);\
-	}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ShareDataCall
 {
@@ -702,7 +669,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	vector<SPApiInstrument> apiInstList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
 	json out;
-	/* TODO 
+	/* TODO
 		 double Margin;
 		 double ContractSize;
 		 STR16 MarketCode; //市场代码
@@ -828,20 +795,15 @@ void after_worker_for_call(uv_work_t * req,int status){
 	}
 	delete my_data;
 }
-SpTraderLogic::SpTraderLogic(void){
-	apiProxyWrapper.SPAPI_Initialize();
-	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
-}
-SpTraderLogic::~SpTraderLogic(void){
-	//apiProxyWrapper.SPAPI_Logout(user_id);
-	//apiProxyWrapper.SPAPI_Uninitialize();
-}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 METHOD_START_ONCALL(on){
 	HANDLE_JS_ARG_TO_STR(args[0],on,64);
 	if(!callback.IsEmpty()){
 		_callback_map[string(on)].Reset(isolate, callback);
 	}
 }METHOD_END_ONCALL(on)
+
 /**
  * call(m,callback) and return in/out/rc
  * async mode if has(callback),using async mode as much as possible, 'coz sync mode might block the nodejs
@@ -856,7 +818,7 @@ METHOD_START_ONCALL(call){
 		if(!callback.IsEmpty()){
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
-			uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call); 
+			uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
 		}else{
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
 			worker_for_call(& req_data->request);
@@ -867,3 +829,34 @@ METHOD_START_ONCALL(call){
 		}
 	}
 }METHOD_END_ONCALL(call)
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
+//char* ToCString(const String::Utf8Value& value){
+//	char* rt=(char*) (*value ? *value : "<string conversion failed>");
+//	return rt;
+//}
+//#define FILL_RC_INT(field)\
+//	rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,field));
+//#define FILL_RS_STR(field)\
+//	out->Set(String::NewFromUtf8(isolate,#field), String::NewFromUtf8(isolate,field));
+//#define HANDLE_JS_ARGS_STR(aaa,kkk,len)\
+//	Local<String> in_##kkk = Local<String>::Cast(aaa);\
+//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
+//	char kkk[len]={0};\
+//	V8ToCharPtr(in_##kkk,kkk);
+//#define HANDLE_JS_PARAM_STR(kkk,len)\
+//	Local<Value> in_##kkk=in->Get(String::NewFromUtf8(isolate,#kkk));\
+//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
+//	char kkk[len]={0};\
+//	V8ToCharPtr(in_##kkk,kkk);
+//#define HANDLE_JS_PARAM_INT(kkk)\
+//	Local<Value> in_##kkk=in->Get(String::NewFromUtf8(isolate,#kkk));\
+//	in->Set(String::NewFromUtf8(isolate,#kkk),in_##kkk);\
+//	int kkk;\
+//	if(in_##kkk->IsNumber()){\
+//		Local<Number> tmp_##kkk= Local<Number>::Cast(in_##kkk);\
+//		kkk=0+tmp_##kkk->NumberValue();\
+//		rt->Set(String::NewFromUtf8(isolate,#kkk), Integer::New(isolate,kkk));\
+//	}
+

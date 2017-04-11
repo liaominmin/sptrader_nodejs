@@ -212,12 +212,12 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SpTraderLogic::SpTraderLogic(void){
-	apiProxyWrapper.SPAPI_Initialize();
+	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 SpTraderLogic::~SpTraderLogic(void){
-	//apiProxyWrapper.SPAPI_Logout(user_id);
-	//apiProxyWrapper.SPAPI_Uninitialize();
+	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
+	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
@@ -559,6 +559,25 @@ struct ShareDataCall
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
+//1.5
+inline void SPAPI_Login(ShareDataCall * my_data){
+	my_data->rc = apiProxyWrapper.SPAPI_Login();
+}
+//1.4
+inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["host"],host,256);
+	HANDLE_IN_TO_INT(in["port"],port);
+	HANDLE_IN_TO_STR(in["license"],license,256);
+	HANDLE_IN_TO_STR(in["app_id"],app_id,256);
+	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_STR(in["password"],password,256);
+	apiProxyWrapper.SPAPI_SetLoginInfo(host, port, license, app_id, user_id, password);
+	my_data->rc =0;
+}
+//1.6
+inline void SPAPI_Logout(ShareDataCall * my_data){
+}
 inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 	json in=my_data->in;
 	//char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
@@ -582,50 +601,9 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	//out["host_id"]=host_id;
 	//my_data->out=out;
 }
-inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
-	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["host"],host,256);
-	HANDLE_IN_TO_INT(in["port"],port);
-	HANDLE_IN_TO_STR(in["license"],license,256);
-	HANDLE_IN_TO_STR(in["app_id"],app_id,256);
-	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
-	HANDLE_IN_TO_STR(in["password"],password,256);
-	apiProxyWrapper.SPAPI_SetLoginInfo(host, port, license, app_id, user_id, password);
-	my_data->rc =0;
-}
-inline void SPAPI_Login(ShareDataCall * my_data){
-	my_data->rc = apiProxyWrapper.SPAPI_Login();
-}
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
-//	HANDLE_JS_PARAM_STR(user_id,256);
-//
-//	SPApiAccInfo acc_info;
-//	memset(&acc_info, 0, sizeof(SPApiAccInfo));
-//
-//	rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
-//
-//	if (rc == 0)
-//	{
-//		json j;
-//		j["acc_info"]["ClientId"]=acc_info.ClientId;
-//		j["acc_info"]["AEId"]=acc_info.AEId;
-//		j["acc_info"]["BaseCcy"]=acc_info.BaseCcy;
-//		j["acc_info"]["MarginClass"]=acc_info.MarginClass;
-//		j["acc_info"]["NAV"]=acc_info.NAV;
-//		j["acc_info"]["BuyingPower"]=acc_info.BuyingPower;
-//		j["acc_info"]["CashBal"]=acc_info.CashBal;
-//		j["acc_info"]["MarginCall"]=acc_info.MarginCall;
-//		j["acc_info"]["CommodityPL"]=acc_info.CommodityPL;
-//		j["acc_info"]["LockupAmt"]=acc_info.LockupAmt;
-//		j["acc_info"]["LoanToMR"]=acc_info.LoanToMR;
-//		j["acc_info"]["LoanToMV"]=acc_info.LoanToMV;
-//		j["acc_info"]["AccName"]=acc_info.AccName;//need handle Big2Gb
-//		//string str = Big2Gb(acc_info.AccName);
-//		//printf("\nAccInfo: AccName>>>Chinese simplified: %s", str.c_str());
-//	}
-//,SPAPI_GetAccInfo\
 //METHOD_START(SPAPI_GetAccInfo){
 //
 //	HANDLE_JS_PARAM_STR(user_id,256);
@@ -654,12 +632,7 @@ inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 //		//string str = Big2Gb(acc_info.AccName);
 //		//printf("\nAccInfo: AccName>>>Chinese simplified: %s", str.c_str());
 //	}
-//
 //}METHOD_END(SPAPI_GetAccInfo)
-//,SPAPI_LoadInstrumentList\
-//METHOD_START(SPAPI_LoadInstrumentList){
-//	rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
-//}METHOD_END(SPAPI_LoadInstrumentList)
 inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
 }
@@ -668,8 +641,8 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	vector<SPApiInstrument> apiInstList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
 	json out;
-	/* TODO
-		 double Margin;
+	//TODO Macro SPApiInstrument_2_jsonout...
+	/* double Margin;
 		 double ContractSize;
 		 STR16 MarketCode; //市场代码
 		 STR16 InstCode; //产品系列代码
@@ -682,13 +655,15 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 		 */
 	for (int i = 0; i < apiInstList.size(); i++) {
 		SPApiInstrument& inst = apiInstList[i];
+		out[i]["Margin"]=inst.Margin;
 		out[i]["MarketCode"]=inst.MarketCode;
+		out[i]["InstCode"]=inst.InstCode;
 		out[i]["InstName"]=inst.InstName;
 		out[i]["InstName1"]=inst.InstName1;//need fix the encoding
 		out[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
 		out[i]["InstName2u"]=gbk2utf8(inst.InstName2);
 		out[i]["Ccy"]=inst.Ccy;
-		out[i]["InstCode"]=inst.InstCode;
+		out[i]["DecInPrice"]=inst.DecInPrice;
 		out[i]["InstType"]=inst.InstType;
 	}
 	my_data->out=out;
@@ -716,19 +691,18 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
-
-std::map<std::string,void(*)(ShareDataCall*my_data)>apiDict{
-	{"SPAPI_GetLoginStatus",SPAPI_GetLoginStatus},
-		{"SPAPI_SetLoginInfo",SPAPI_SetLoginInfo},
-		{"SPAPI_Login",SPAPI_Login},
-		{"SPAPI_LoadInstrumentList",SPAPI_LoadInstrumentList},
-		{"SPAPI_GetInstrument",SPAPI_GetInstrument},
-		{"SPAPI_LoadProductInfoListByCode",SPAPI_LoadProductInfoListByCode},
-		{"SPAPI_GetProduct",SPAPI_GetProduct},
-		{"SPAPI_GetLoginStatus",SPAPI_GetLoginStatus},
-		{"SPAPI_GetDllVersion",SPAPI_GetDllVersion},
+#define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
+std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
+	ITR(DFN_FNC_PTR,EXPAND(
+				SPAPI_SetLoginInfo,
+				SPAPI_Login,
+				SPAPI_LoadInstrumentList,
+				SPAPI_GetInstrument,
+				SPAPI_LoadProductInfoListByCode,
+				SPAPI_GetProduct,
+				SPAPI_GetLoginStatus,
+				SPAPI_GetDllVersion))
 };
-
 void worker_for_call(uv_work_t * req){
 	// This method will run in a seperate thread where you can do your blocking background work.
 	// NOTES: In this function, you cannot access any V8/node js valiables
@@ -739,7 +713,7 @@ void worker_for_call(uv_work_t * req){
 	rst["api"]=api;
 	rst["in"]=in;
 
-	void (*fcnPtr)(ShareDataCall * my_data) = apiDict[api];
+	void (*fcnPtr)(ShareDataCall * my_data) = _apiDict[api];
 	if(NULL!=fcnPtr){
 		fcnPtr(my_data);
 	}else{

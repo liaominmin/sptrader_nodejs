@@ -43,7 +43,10 @@
 #define WHILE_INDIRECT() WHILE 
 
 //consume macro q
-#define ITR(mmm,qqq,...) EVAL( WHILE( mmm, qqq, __VA_ARGS__ ) );
+#define ITR(mmm,qqq,...) EVAL( WHILE( mmm, qqq, __VA_ARGS__ ) )
 
 // QUOTEME(sth) => "sth"
 #define QUOTEME(sth) #sth
+
+// warp XXXX as {XXXX}
+#define BRACKET_WRAP(...) {__VA_ARGS__}

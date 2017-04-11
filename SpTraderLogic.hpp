@@ -649,6 +649,41 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
+//1.43
+inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["user_id"],user_id,64);
+	vector<SPApiAccBal> apiAccBalList;
+	my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
+	json out;
+	/* 帐户现金结余结构:
+		 typedef struct
+		 {
+		 double CashBf; //上日结余
+		 double TodayCash; //今日存取
+		 double NotYetValue; //未交收
+		 double Unpresented; //未兑现
+		 double TodayOut; //提取要求
+		 STR4 Ccy; //货币
+		 } SPApiAccBal;
+		 现金结余 = CashBf + TodayCash + NotYetValue
+		 参考兑换率：请参考GetCcyRate。
+		 现金(基本货币) 现金结余 * 兑换率
+		 */
+	for (int i = 0; i < apiAccBalList.size(); i++) {
+		SPApiAccBal& val = apiAccBalList[i];
+		out[i]["CashBf"]=val.CashBf;
+		out[i]["TodayCash"]=val.TodayCash;
+		out[i]["NotYetValue"]=val.NotYetValue;
+		out[i]["Unpresented"]=val.Unpresented;
+		out[i]["TodayOut"]=val.TodayOut;
+		out[i]["Ccy"]=val.Ccy;
+	}
+	my_data->out=out;
+}
+#define COPY_FIELD(from,to,fff) from[#to][#fff]=to.fff;
+#define COPY_out_2_acc_info(fff) COPY_FIELD(out,acc_info,fff);
+
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -661,19 +696,67 @@ inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	if (rc == 0)
 	{
 		json out;
-		out["acc_info"]["ClientId"]=acc_info.ClientId;
-		out["acc_info"]["AEId"]=acc_info.AEId;
-		out["acc_info"]["BaseCcy"]=acc_info.BaseCcy;
-		out["acc_info"]["MarginClass"]=acc_info.MarginClass;
-		out["acc_info"]["NAV"]=acc_info.NAV;
-		out["acc_info"]["BuyingPower"]=acc_info.BuyingPower;
-		out["acc_info"]["CashBal"]=acc_info.CashBal;
-		out["acc_info"]["MarginCall"]=acc_info.MarginCall;
-		out["acc_info"]["CommodityPL"]=acc_info.CommodityPL;
-		out["acc_info"]["LockupAmt"]=acc_info.LockupAmt;
-		out["acc_info"]["LoanToMR"]=acc_info.LoanToMR;
-		out["acc_info"]["LoanToMV"]=acc_info.LoanToMV;
-		out["acc_info"]["AccName"]=acc_info.AccName;//big
+		/* typedef struct {
+			 double NAV; //资产净值
+			 double BuyingPower; //购买力
+			 double CashBal; //现金结余
+			 double MarginCall; //追收金额
+			 double CommodityPL; //商品盈亏
+			 double LockupAmt; //冻结金额
+			 double CreditLimit; //信贷限额
+			 double MaxMargin; //最高保证金
+			 double MaxLoanLimit; //最高借贷上限
+			 double TradingLimit; //信用交易额
+			 double RawMargin; //原始保证金
+			 double IMargin; //基本保证金
+			 double MMargin; //维持保证金
+			 double TodayTrans; //交易金额
+			 double LoanLimit; //证券可按总值
+			 double TotalFee; //费用总额
+			 double LoanToMR //借贷/可按值%
+			 double LoanToMV //借贷/市值%
+			 STR16 AccName; //名称
+			 STR4 BaseCcy; //基本币种
+			 STR16 MarginClass; //保证金类别
+			 STR16 TradeClass; //交易额别
+			 STR16 ClientId; //客户
+			 STR16 AEId; // 经纪
+			 char AccType; //户口类别
+			 char CtrlLevel; //控制级数
+			 char Active; // 生效
+			 char MarginPeriod; //时段
+			 } SPApiAccInfo; */
+		
+		//COPY_FIELD(out,acc_info,NAV);
+		ITR(COPY_out_2_acc_info,EXPAND(
+					NAV,
+					BuyingPower,
+					CashBal,
+					MarginCall,
+					CommodityPL,
+					LockupAmt,
+					CreditLimit,
+					MaxMargin,
+					MaxLoanLimit,
+					TradingLimit,
+					RawMargin,
+					IMargin,
+					TodayTrans,
+					LoanLimit,
+					TotalFee,
+					LoanToMR,
+					LoanToMV,
+					AccName,
+					BaseCcy,
+					MarginClass,
+					TradeClass,
+					ClientId,
+					AEId,
+					AccType,
+					CtrlLevel,
+					Active,
+					MarginPeriod,
+					));
 		out["acc_info"]["AccNameUtf8"]=big2utf8(acc_info.AccName);
 		my_data->out=out;
 	}
@@ -748,7 +831,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 		//SPAPI_GetProductByArray,//1.40
 		//SPAPI_GetProductByCode,//1.41
 		//SPAPI_GetAccBalCount,//1.42
-		//SPAPI_GetAllAccBal,//1.43
+		SPAPI_GetAllAccBal,//1.43,注：此方法如果是AE登入需要AccountLogin一个客户才能取客户数据.
 		//SPAPI_GetAllAccBalByArray,//1.44
 		//SPAPI_GetAccBalByCurrency,//1.45
 		//SPAPI_SubscribeTicker,//1.46
@@ -759,7 +842,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 		SPAPI_LoadProductInfoListByCode,//1.51
 		//SPAPI_SetApiLogPath,//1.52
 		//SPAPI_GetCcyRateByCcy,//1.53
-		//SPAPI_AccountLogin,//1.54
+		//SPAPI_AccountLogin,//1.54 该方法只针对AE,当AE登录后可选择性登录账户
 		//SPAPI_AccountLogout,//1.55
 		//SPAPI_SendAccControl,//1.56
 		))

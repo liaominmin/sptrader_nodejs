@@ -108,6 +108,10 @@ std::string gbk2utf8(const char* in)
 {
 	return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8"));
 }
+std::string big2utf8(const char* in)
+{
+	return any2utf8(std::string(in),std::string("big5"),std::string("utf-8"));
+}
 
 struct ShareDataOn //for on()
 {
@@ -587,45 +591,11 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
 	HANDLE_IN_TO_INT(in["host_id"],host_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
-	//json out;
-	//out["user_id"]=user_id;
-	//out["host_id"]=host_id;
-	//my_data->out=out;
 }
 //1.33
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
-//METHOD_START(SPAPI_GetAccInfo){
-//
-//	HANDLE_JS_PARAM_STR(user_id,256);
-//
-//	SPApiAccInfo acc_info;
-//	memset(&acc_info, 0, sizeof(SPApiAccInfo));
-//
-//	rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
-//
-//	if (rc == 0)
-//	{
-//		json j;
-//		j["acc_info"]["ClientId"]=acc_info.ClientId;
-//		j["acc_info"]["AEId"]=acc_info.AEId;
-//		j["acc_info"]["BaseCcy"]=acc_info.BaseCcy;
-//		j["acc_info"]["MarginClass"]=acc_info.MarginClass;
-//		j["acc_info"]["NAV"]=acc_info.NAV;
-//		j["acc_info"]["BuyingPower"]=acc_info.BuyingPower;
-//		j["acc_info"]["CashBal"]=acc_info.CashBal;
-//		j["acc_info"]["MarginCall"]=acc_info.MarginCall;
-//		j["acc_info"]["CommodityPL"]=acc_info.CommodityPL;
-//		j["acc_info"]["LockupAmt"]=acc_info.LockupAmt;
-//		j["acc_info"]["LoanToMR"]=acc_info.LoanToMR;
-//		j["acc_info"]["LoanToMV"]=acc_info.LoanToMV;
-//		j["acc_info"]["AccName"]=acc_info.AccName;//need handle Big2Gb
-//		//string str = Big2Gb(acc_info.AccName);
-//		//printf("\nAccInfo: AccName>>>Chinese simplified: %s", str.c_str());
-//	}
-//}METHOD_END(SPAPI_GetAccInfo)
-////1.34
 //1.34
 inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
@@ -656,7 +626,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 		out[i]["InstName"]=inst.InstName;
 		out[i]["InstName1"]=inst.InstName1;//need fix the encoding
 		out[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
-		out[i]["InstName2u"]=gbk2utf8(inst.InstName2);
+		out[i]["InstName2Utf8"]=gbk2utf8(inst.InstName2);
 		out[i]["Ccy"]=inst.Ccy;
 		out[i]["DecInPrice"]=inst.DecInPrice;
 		out[i]["InstType"]=inst.InstType;
@@ -678,6 +648,35 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 		//printf("\n Number:%d  ProdCode=%s , ProdName=%s , InstCode=%s ",i+1, prod.ProdCode, prod.ProdName, prod.InstCode);
 	}
 	my_data->out=out;
+}
+//1.49
+inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+
+	SPApiAccInfo acc_info;
+	memset(&acc_info, 0, sizeof(SPApiAccInfo));
+	int rc;
+	my_data->rc = rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
+	if (rc == 0)
+	{
+		json out;
+		out["acc_info"]["ClientId"]=acc_info.ClientId;
+		out["acc_info"]["AEId"]=acc_info.AEId;
+		out["acc_info"]["BaseCcy"]=acc_info.BaseCcy;
+		out["acc_info"]["MarginClass"]=acc_info.MarginClass;
+		out["acc_info"]["NAV"]=acc_info.NAV;
+		out["acc_info"]["BuyingPower"]=acc_info.BuyingPower;
+		out["acc_info"]["CashBal"]=acc_info.CashBal;
+		out["acc_info"]["MarginCall"]=acc_info.MarginCall;
+		out["acc_info"]["CommodityPL"]=acc_info.CommodityPL;
+		out["acc_info"]["LockupAmt"]=acc_info.LockupAmt;
+		out["acc_info"]["LoanToMR"]=acc_info.LoanToMR;
+		out["acc_info"]["LoanToMV"]=acc_info.LoanToMV;
+		out["acc_info"]["AccName"]=acc_info.AccName;//big
+		out["acc_info"]["AccNameUtf8"]=big2utf8(acc_info.AccName);
+		my_data->out=out;
+	}
 }
 //1.50
 inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
@@ -755,7 +754,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 		//SPAPI_SubscribeTicker,//1.46
 		//SPAPI_SubscribeQuoteRequest,//1.47
 		//SPAPI_SubscribeAllQuoteRequest,//1.48
-		//SPAPI_GetAccInfo,//1.49
+		SPAPI_GetAccInfo,//1.49
 		SPAPI_GetDllVersion,//1.50
 		SPAPI_LoadProductInfoListByCode,//1.51
 		//SPAPI_SetApiLogPath,//1.52

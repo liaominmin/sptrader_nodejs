@@ -715,8 +715,15 @@ inline void SPAPI_GetPosCount(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetPosCount(user_id);
 }
+//1.31
+inline void SPAPI_SubscribePrice(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["prod_code"],prod_code);
+	COPY_TO_INT(in["mode"],mode);
+	my_data->rc = apiProxyWrapper.SPAPI_SubscribePrice(user_id,prod_code,mode);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
+}
 //1.32
-
 inline void SPAPI_GetPriceByCode(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
@@ -865,7 +872,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_GetAllTradeByArray,//1.30 TODO
 				//成交相关：}
 				//行情相关：{
-				//SPAPI_SubscribePrice,//1.31 暂时我们不需要订阅，先用下面的 SPAPI_GetPriceByCode 足够做 v0.0.1
+				SPAPI_SubscribePrice,//1.31 暂时我们不需要订阅，先用下面的 SPAPI_GetPriceByCode 足够做 v0.0.1
 				SPAPI_GetPriceByCode,//1.32 TODO 重要
 				//行情相关：}
 				//市场及产品相关{

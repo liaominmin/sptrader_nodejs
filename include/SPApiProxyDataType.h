@@ -230,6 +230,13 @@ typedef struct
     STR16 ProdCode;               //合约代码
     STR40 ProdName;               //合约名称
     char DecInPrice;              //合约小数位
+		//COPY FROM WIN64's spapidll.h {
+		int32_t ExStateNo;            //港期市场状态
+		int32_t TradeStateNo;         //市场状况
+		bool Suspend;                 //股票-是否已停牌
+		int32_t ExpiryYMD;            //产品到期日期
+		int32_t ContractYMD;          //合约到期日期
+		//COPY FROM WIN64's spapidll.h }
     int32_t Timestamp;
 } SPApiPrice;
 

@@ -42,8 +42,18 @@
 )
 #define WHILE_INDIRECT() WHILE 
 
+#define WHILE2(macro, value1,value2,value, ...) \
+	WHEN(NOT(IS_PAREN(value ()))) \
+( \
+  OBSTRUCT(macro) (value1,value2,value) \
+  OBSTRUCT(WHILE_INDIRECT2) () (macro, value1,value2,__VA_ARGS__) \
+)
+#define WHILE_INDIRECT2() WHILE2
+
 //consume macro q
 #define ITR(mmm,qqq,...) EVAL( WHILE( mmm, qqq, __VA_ARGS__ ) )
+#define ITR1(mmm,mm1,qqq,...) EVAL( WHILE( mmm,mm1, qqq, __VA_ARGS__ ) )
+#define ITR2(mmm,mm1,mm2,qqq,...) EVAL( WHILE2( mmm,mm1,mm2,qqq, __VA_ARGS__ ) )
 
 // QUOTEME(sth) => "sth"
 #define QUOTEME(sth) #sth

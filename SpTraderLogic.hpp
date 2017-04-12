@@ -176,19 +176,19 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	Local<String> in_##kkk = Local<String>::Cast(aaa);\
 	char kkk[255]={0};\
 	V8ToCharPtr(in_##kkk,kkk);
-#define HANDLE_IN_TO_INT(aaa,kkk)\
+#define COPY_TO_INT(aaa,kkk)\
 	int kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
-#define HANDLE_IN_TO_LNG(aaa,kkk)\
+#define COPY_TO_LNG(aaa,kkk)\
 	long kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
-#define HANDLE_IN_TO_STR_LEN(aaa,kkk,len)\
+#define COPY_TO_STR_LEN(aaa,kkk,len)\
 	char kkk[len]={0};\
 	if(aaa.is_string()){\
 		string str_in_##kkk=aaa;\
 		strcpy(kkk,str_in_##kkk.c_str());\
 	}
-#define HANDLE_IN_TO_STR(aaa,kkk)\
+#define COPY_TO_STR(aaa,kkk)\
 	char kkk[255]={0};\
 	if(aaa.is_string()){\
 		string str_in_##kkk=aaa;\
@@ -232,55 +232,183 @@ SpTraderLogic::~SpTraderLogic(void){
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define COPY_STF(sss,ttt,fff) ttt[#fff]=sss.fff;
+#define COPY_tblock_FIELDS(sss,ttt)\
+	struct tm *tblock;\
+	time_t TheTime = sss;\
+	tblock = localtime(&TheTime);\
+	ttt["tm_hour"]=tblock->tm_hour;\
+	ttt["tm_min"]=tblock->tm_min;\
+	ttt["tm_sec"]=tblock->tm_sec;
+#define COPY_SPApiPrice_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				BidQty[SP_MAX_DEPTH],\
+				BidTicket[SP_MAX_DEPTH],\
+				Ask[SP_MAX_DEPTH],\
+				AskQty[SP_MAX_DEPTH],\
+				AskTicket[SP_MAX_DEPTH],\
+				Last[SP_MAX_LAST],\
+				LastQty[SP_MAX_LAST],\
+				LastTime[SP_MAX_LAST],\
+				Equil,\
+				Open,\
+				High,\
+				Low,\
+				Close,\
+				CloseDate,\
+				TurnoverVol,\
+				TurnoverAmt,\
+				OpenInt,\
+				ProdCode,\
+				ProdName,\
+				DecInPrice,\
+				ExStateNo,\
+				TradeStateNo,\
+				Suspend,\
+				ExpiryYMD,\
+				ContractYMD,\
+				Timestamp,\
+				))
+#define COPY_SPApiTrade_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				RecNo,\
+				Price,\
+				TradeNo,\
+				ExtOrderNo,\
+				IntOrderNo,\
+				Qty,\
+				TradeDate,\
+				TradeTime,\
+				AccNo,\
+				ProdCode,\
+				Initiator,\
+				Ref,\
+				Ref2,\
+				GatewayCode,\
+				ClOrderId,\
+				BuySell,\
+				OpenClose,\
+				Status,\
+				DecInPrice,\
+				OrderPrice,\
+				TradeRef,\
+				TotalQty,\
+				RemainingQty,\
+				TradedQty,\
+				AvgTradedPrice,\
+				));
+//AvgPrice,
+#define COPY_SPApiMMOrder_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				BidExtOrderNo,\
+				AskExtOrderNo,\
+				BidAccOrderNo,\
+				AskAccOrderNo,\
+				BidPrice,\
+				AskPrice,\
+				BidQty,\
+				AskQty,\
+				SpecTime,\
+				OrderOptions,\
+				ProdCode,\
+				AccNo,\
+				ClOrderId,\
+				OrderType,\
+				ValidType,\
+				DecInPrice,\
+				));
+//OrigClOrderId,//旧用户自定义参考,win's spapidll.h也没有哦.
 #define COPY_SPApiAccInfo_FIELDS(sss,ttt)\
-	ttt["NAV"]=sss.NAV;\
-	ttt["BuyingPower"]=sss.BuyingPower;\
-	ttt["CashBal"]=sss.CashBal;\
-	ttt["MarginCall"]=sss.MarginCall;\
-	ttt["CommodityPL"]=sss.CommodityPL;\
-	ttt["LockupAmt"]=sss.LockupAmt;\
-	ttt["CreditLimit"]=sss.CreditLimit;\
-	ttt["MaxMargin"]=sss.MaxMargin;\
-	ttt["MaxLoanLimit"]=sss.MaxLoanLimit;\
-	ttt["TradingLimit"]=sss.TradingLimit;\
-	ttt["RawMargin"]=sss.RawMargin;\
-	ttt["IMargin"]=sss.IMargin;\
-	ttt["MMargin"]=sss.MMargin;\
-	ttt["TodayTrans"]=sss.TodayTrans;\
-	ttt["LoanLimit"]=sss.LoanLimit;\
-	ttt["TotalFee"]=sss.TotalFee;\
-	ttt["LoanToMR"]=sss.LoanToMR;\
-	ttt["LoanToMV"]=sss.LoanToMV;\
-	ttt["AccName"]=sss.AccName;\
-	ttt["BaseCcy"]=sss.BaseCcy;\
-	ttt["MarginClass"]=sss.MarginClass;\
-	ttt["TradeClass"]=sss.TradeClass;\
-	ttt["ClientId"]=sss.ClientId;\
-	ttt["AEId"]=sss.AEId;\
-	ttt["AccType"]=sss.AccType;\
-	ttt["CtrlLevel"]=sss.CtrlLevel;\
-	ttt["Active"]=sss.Active;\
-	ttt["MarginPeriod"]=sss.MarginPeriod;\
-	ttt["AccNameUtf8"]=big2utf8(sss.AccName);
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				NAV,\
+				BuyingPower,\
+				CashBal,\
+				MarginCall,\
+				CommodityPL,\
+				LockupAmt,\
+				CreditLimit,\
+				MaxMargin,\
+				MaxLoanLimit,\
+				TradingLimit,\
+				RawMargin,\
+				IMargin,\
+				MMargin,\
+				TodayTrans,\
+				LoanLimit,\
+				TotalFee,\
+				LoanToMR,\
+				LoanToMV,\
+				AccName,\
+				BaseCcy,\
+				MarginClass,\
+				TradeClass,\
+				ClientId,\
+				AEId,\
+				AccType,\
+				CtrlLevel,\
+				Active,\
+				MarginPeriod,\
+				));\
+				ttt["AccNameUtf8"]=big2utf8(sss.AccName);
 #define COPY_SPApiInstrument_FIELDS(sss,ttt)\
-	ttt["Margin"]=sss.Margin;\
-	ttt["ContractSize"]=sss.ContractSize;\
-	ttt["MarketCode"]=sss.MarketCode;\
-	ttt["InstCode"]=sss.InstCode;\
-	ttt["InstName"]=sss.InstName;\
-	ttt["InstName1"]=sss.InstName1;\
-	ttt["InstName2"]=sss.InstName2;\
-	ttt["Ccy"]=sss.Ccy;\
-	ttt["DecInPrice"]=sss.DecInPrice;\
-	ttt["InstType"]=sss.InstType;\
-	ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				Margin,\
+				ContractSize,\
+				MarketCode,\
+				InstCode,\
+				InstName,\
+				InstName1,\
+				InstName2,\
+				Ccy,\
+				DecInPrice,\
+				InstType\
+				));\
+				ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
 #define COPY_SPApiAccBal_FIELDS(sss,ttt)\
-	ttt["CashBf"]=sss.CashBf;\
-	ttt["TodayCash"]=sss.TodayCash;\
-	ttt["NotYetValue"]=sss.NotYetValue;\
-	ttt["Unpresented"]=sss.Unpresented;\
-	ttt["TodayOut"]=sss.TodayOut;\
-	ttt["Ccy"]=sss.Ccy;
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				CashBf,\
+				TodayCash,\
+				NotYetValue,\
+				Unpresented,\
+				TodayOut,\
+				Ccy\
+				))
+#define COPY_SPApiOrder_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				Price,\
+				StopLevel,\
+				UpLevel,\
+				UpPrice,\
+				DownLevel,\
+				DownPrice,\
+				ExtOrderNo,\
+				IntOrderNo,\
+				Qty,\
+				TradedQty,\
+				TotalQty,\
+				ValidTime,\
+				SchedTime,\
+				TimeStamp,\
+				OrderOptions,\
+				AccNo,\
+				ProdCode,\
+				Initiator,\
+				Ref,\
+				Ref2,\
+				GatewayCode,\
+				ClOrderId,\
+				BuySell,\
+				StopType,\
+				OpenClose,\
+				CondType,\
+				OrderType,\
+				ValidType,\
+				Status,\
+				DecInPrice,\
+				OrderAction,\
+				UpdateTime,\
+				UpdateSeqNo\
+				))
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	ShareDataOn * req_data = new ShareDataOn;\
 	req_data->strCallback=string(#$callbackName);\
@@ -297,17 +425,13 @@ void SpTraderLogic::OnTest()
 void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 {
 	json j;
-	char out_ret_msg[128]={0};
-	strcpy(out_ret_msg,ret_msg);
 	j["ret_code"]=ret_code;
-	//j["ret_msg"]=string(ret_msg);//seems sgmt fault...?
-	j["ret_msg"]=out_ret_msg;
+	j["ret_msg"]=ret_msg;
 	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
 }
 //2
 void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 {
-	cout <<"Psw Change Reply:"<< ret_code << '\t' + string(ret_msg) << endl;
 	json j;
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=ret_msg;
@@ -316,11 +440,10 @@ void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 //3
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
-	cout << "Order Request Failed: Order#"  << order->IntOrderNo << " [" << err_code << " (" +string(err_msg) << ")], Action=" << action << " ClorderId=" +string(order->ClOrderId) << endl;
+	//cout << "Order Request Failed: Order#"  << order->IntOrderNo << " [" << err_code << " (" +string(err_msg) << ")], Action=" << action << " ClorderId=" +string(order->ClOrderId) << endl;
 	json j;
+	COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	j["action"]=action;
-	j["order"]["ClOrderId"]=string(order->ClOrderId);
-	j["order"]["IntOrderNo"]=order->IntOrderNo;
 	j["err_code"]=err_code;
 	j["err_msg"]=err_msg;
 	ASYNC_CALLBACK_FOR_ON(OrderRequestFailed,j);
@@ -330,20 +453,14 @@ void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=0;
-	j["order"]["Price"]=order->Price;
-	j["order"]["Qty"]=order->Qty;
-	j["order"]["TradedQty"]=order->TradedQty;
-	j["order"]["TotalQty"]=order->TotalQty;
-	j["order"]["ClOrderId"]=string(order->ClOrderId);
-	//j["order"]["IntOrderNo"]=order->IntOrderNo;
+	COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderBeforeSendReport,j);
 }
 //5 SPAPI_RegisterMMOrderRequestFailed
 void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
 {
-	printf("\nMM Order Request Failed:Order#%ld [%ld (%s)], ClorderId=%s",mm_order->AccNo ,err_code, err_msg, mm_order->ClOrderId);
 	json j;
-	j["mm_order"]["ClOrderId"]=mm_order->ClOrderId;
+	COPY_SPApiMMOrder_FIELDS((*mm_order),j["mm_order"]);
 	j["err_code"]=err_code;
 	j["err_msg"]=err_msg;
 	ASYNC_CALLBACK_FOR_ON(MMOrderRequestFailed,j);
@@ -351,25 +468,13 @@ void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_c
 //6
 void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 {
-	printf("\nMM Order BeforeSend Report [acc_no:%s]:\nAskAccOrderNo:%ld , AskExtOrderNo#%lld , AskQty=%ld\nBidAccOrderNo:%ld , BidExtOrderNo#%lld, BidQty=%ld\n", mm_order->AccNo,
-			mm_order->AskAccOrderNo, mm_order->AskExtOrderNo , mm_order->AskQty, mm_order->BidAccOrderNo, mm_order->BidExtOrderNo,  mm_order->BidQty);
 	json j;
-	j["mm_order"]["AccNo"]=mm_order->AccNo;
-	j["mm_order"]["AskAccOrderNo"]=mm_order->AskAccOrderNo;
-	j["mm_order"]["AskExtOrderNo"]=mm_order->AskExtOrderNo;
-	j["mm_order"]["AskQty"]=mm_order->AskQty;
-	j["mm_order"]["BidAccOrderNo"]=mm_order->BidAccOrderNo;
-	j["mm_order"]["BidExtOrderNo"]=mm_order->BidExtOrderNo;
-	j["mm_order"]["BidQty"]=mm_order->BidQty;
+	COPY_SPApiMMOrder_FIELDS((*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderBeforeSendReport,j);
 }
 //7.SPAPI_RegisterQuoteRequestReceivedReport
 void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
 {
-	cout <<"Quote Request: ProductCode:"+ string(product_code) << "  b_s:"<< buy_sell << " qty="<< qty << endl;
-	//(buy_sell == 0)  strcpy(bs, "Both");
-	//(buy_sell == 'B')strcpy(bs, "Buy");
-	//(buy_sell == 'S')strcpy(bs, "Sell");
 	json j;
 	j["product_code"]=product_code;
 	j["buy_sell"]=buy_sell;
@@ -379,69 +484,29 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 //8
 void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 {
-	struct tm *tblock;
-	time_t TheTime = trade->TradeTime;
-	tblock = localtime(&TheTime);
-	//wjc.tmp
-	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
-	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
-	cout <<" trade_qty=" << trade->Qty << endl;
-	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;
 	json j;
-	j["trade"]["IntOrderNo"]=trade->IntOrderNo;
-	j["trade"]["TradeNo"]=trade->TradeNo;
-	j["trade"]["Price"]=trade->Price;
-	j["trade"]["AvgTradedPrice"]=trade->AvgTradedPrice;
-	j["trade"]["Qty"]=trade->Qty;
-	j["tblock"]["tm_hour"]=tblock->tm_hour;
-	j["tblock"]["tm_min"]=tblock->tm_min;
-	j["tblock"]["tm_sec"]=tblock->tm_sec;
+	COPY_SPApiTrade_FIELDS((*trade),j["trade"]);
+	COPY_tblock_FIELDS(trade->TradeTime,j["tblock"]);
 	ASYNC_CALLBACK_FOR_ON(TradeReport,j);
 }
 //9
 void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
 {
-	struct tm *tblock;
-	time_t TheTime = trade->TradeTime;
-	tblock = localtime(&TheTime);
-	//wjc
-	//cout <<"Trade Report: [acc_no=" + string(trade->AccNo) << " Status=" << string(OutputOrderStatus(trade->Status)) << " ProdCode=" + string(trade->ProdCode);
-	cout <<" Order#: " << trade->IntOrderNo << " trade_no=" << trade->TradeNo << " trade_price=" << trade->Price << " avg_price=" << trade->AvgTradedPrice;
-	cout <<" trade_qty=" << trade->Qty << endl;
-	cout <<" time=" << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec  << endl;
 	json j;
-	j["trade"]["IntOrderNo"]=trade->IntOrderNo;
-	j["trade"]["TradeNo"]=trade->TradeNo;
-	j["trade"]["Price"]=trade->Price;
-	j["trade"]["AvgTradedPrice"]=trade->AvgTradedPrice;
-	j["trade"]["Qty"]=trade->Qty;
-	j["tblock"]["tm_hour"]=tblock->tm_hour;
-	j["tblock"]["tm_min"]=tblock->tm_min;
-	j["tblock"]["tm_sec"]=tblock->tm_sec;
+	if(NULL!=trade){
+		COPY_SPApiTrade_FIELDS((*trade),j["trade"]);
+		COPY_tblock_FIELDS(trade->TradeTime,j["tblock"]);
+	}
 	ASYNC_CALLBACK_FOR_ON(LoadTradeReadyPush,j);
 }
 //10
 void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
 {
-	struct tm *tblock;
-	if (price == NULL)return;
-	/*string bidQ = CommonUtils::GetBigQtyStr(price->BidQty[0], true);
-		string bidPrice = CommonUtils::BidAskPriceStr(price->Bid[0], price->DecInPrice);
-		string askPrice = CommonUtils::BidAskPriceStr(price->Ask[0], price->DecInPrice);
-		string askQ = CommonUtils::GetBigQtyStr(price->AskQty[0], true);*/
-	time_t TheTime = price->Timestamp;
-	tblock = localtime(&TheTime);
-	cout <<"Price:"+ string(price->ProdCode)<< '\t' << price->BidQty[0] << '\t' << price->Bid[0] << '\t' << price->Ask[0] << '\t' << price->AskQty[0]<< '\t' << price->Timestamp<< "["<< tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec << "]" << endl;
 	json j;
-	j["price"]["ProdCode"]=string(price->ProdCode);
-	j["price"]["BidQty0"]=price->BidQty[0];
-	j["price"]["Bid0"]=price->Bid[0];
-	j["price"]["Ask0"]=price->Ask[0];
-	j["price"]["AskQty0"]=price->AskQty[0];
-	j["price"]["Timestamp"]=price->Timestamp;
-	j["tblock"]["tm_hour"]=tblock->tm_hour;
-	j["tblock"]["tm_min"]=tblock->tm_min;
-	j["tblock"]["tm_sec"]=tblock->tm_sec;
+	if(NULL!=price){
+		COPY_SPApiPrice_FIELDS((*price),j["price"]);
+		COPY_tblock_FIELDS(price->Timestamp,j["tblock"]);
+	}
 	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
 }
 //11
@@ -581,12 +646,6 @@ void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 	cout <<" TodayOut=" << acc_bal->TodayOut << " Unpresented=" << acc_bal->Unpresented << endl;
 	json j;
 	COPY_SPApiAccBal_FIELDS((*acc_bal),j["acc_bal"]);
-	//j["acc_bal"]["Ccy"]=string(acc_bal->Ccy);
-	//j["acc_bal"]["CashBf"]=acc_bal->CashBf;
-	//j["acc_bal"]["NotYetValue"]=acc_bal->NotYetValue;
-	//j["acc_bal"]["TodayCash"]=acc_bal->TodayCash;
-	//j["acc_bal"]["TodayOut"]=acc_bal->TodayOut;
-	//j["acc_bal"]["Unpresented"]=acc_bal->Unpresented;
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
 }
 //22
@@ -624,12 +683,12 @@ struct ShareDataCall
 //1.4
 inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["host"],host);
-	HANDLE_IN_TO_INT(in["port"],port);
-	HANDLE_IN_TO_STR(in["license"],license);
-	HANDLE_IN_TO_STR(in["app_id"],app_id);
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
-	HANDLE_IN_TO_STR(in["password"],password);
+	COPY_TO_STR(in["host"],host);
+	COPY_TO_INT(in["port"],port);
+	COPY_TO_STR(in["license"],license);
+	COPY_TO_STR(in["app_id"],app_id);
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["password"],password);
 	apiProxyWrapper.SPAPI_SetLoginInfo(host, port, license, app_id, user_id, password);
 	my_data->rc =0;
 }
@@ -640,30 +699,30 @@ inline void SPAPI_Login(ShareDataCall * my_data){
 //1.6
 inline void SPAPI_Logout(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_Logout(user_id);
 }
 //1.8
 inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
-	HANDLE_IN_TO_INT(in["host_id"],host_id);
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_INT(in["host_id"],host_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
 }
 //1.17
 inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
-	HANDLE_IN_TO_STR(in["acc_no"],acc_no);
-	HANDLE_IN_TO_LNG(in["accOrderNo"],accOrderNo);
-	HANDLE_IN_TO_STR(in["productCode"],productCode);
-	HANDLE_IN_TO_STR(in["clOrderId"],clOrderId);
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	COPY_TO_LNG(in["accOrderNo"],accOrderNo);
+	COPY_TO_STR(in["productCode"],productCode);
+	COPY_TO_STR(in["clOrderId"],clOrderId);
 	my_data->rc = apiProxyWrapper.SPAPI_DeleteOrderBy(user_id,acc_no,accOrderNo,productCode,clOrderId);
 }
 //1.24
 inline void SPAPI_GetPosCount(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetPosCount(user_id);
 }
 //1.33
@@ -694,7 +753,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 //1.39
 inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["inst_code"],inst_code);
+	COPY_TO_STR(in["inst_code"],inst_code);
 	vector<SPApiProduct> apiProdList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetProduct(apiProdList);
 	json out;
@@ -710,7 +769,7 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 //1.41
 inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["prod_code"],prod_code);
+	COPY_TO_STR(in["prod_code"],prod_code);
 	SPApiProduct prod;
 	memset(&prod, 0, sizeof(SPApiProduct));
 	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
@@ -723,13 +782,13 @@ inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 //1.42
 inline void SPAPI_GetAccBalCount(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetAccBalCount(user_id);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 }
 //1.43
 inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["user_id"],user_id);
 	vector<SPApiAccBal> apiAccBalList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
 	json out;
@@ -742,7 +801,7 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["user_id"],user_id);
 	SPApiAccInfo acc_info;
 	memset(&acc_info, 0, sizeof(SPApiAccInfo));
 	int rc;
@@ -758,9 +817,9 @@ inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 	json in=my_data->in;
 	//char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
-	HANDLE_IN_TO_STR(in["ver_no"],ver_no);
-	HANDLE_IN_TO_STR(in["rel_no"],rel_no);
-	HANDLE_IN_TO_STR(in["suffix"],suffix);
+	COPY_TO_STR(in["ver_no"],ver_no);
+	COPY_TO_STR(in["rel_no"],rel_no);
+	COPY_TO_STR(in["suffix"],suffix);
 	my_data->rc = apiProxyWrapper.SPAPI_GetDllVersion(ver_no, rel_no, suffix);
 	json out;
 	out["ver_no"]=ver_no;
@@ -771,11 +830,8 @@ inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 //1.51
 inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["inst_code"],inst_code);
+	COPY_TO_STR(in["inst_code"],inst_code);
 	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
-	json out;
-	out["inst_code"]=inst_code;
-	my_data->out=out;
 }
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
 std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{

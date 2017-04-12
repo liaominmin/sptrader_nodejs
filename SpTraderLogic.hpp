@@ -282,7 +282,8 @@ SpTraderLogic::~SpTraderLogic(void){
 				ProdName2,\
 				OptStyle,\
 				TickSize,\
-				))
+				));\
+				ttt["ProdNameUtf8"]=gbk2utf8(sss.ProdName2);
 #define COPY_SPApiPrice_FIELDS(sss,ttt)\
 	ITR2(COPY_STF,sss,ttt,EXPAND(\
 				BidQty[SP_MAX_DEPTH],\
@@ -713,12 +714,20 @@ inline void SPAPI_GetPosCount(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetPosCount(user_id);
 }
+//1.32
+
+inline void SPAPI_GetPriceByCode(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["prod_code"],prod_code);
+	SPApiPrice price;
+	memset(&price, 0, sizeof(SPApiPrice));
+	my_data->rc = apiProxyWrapper.SPAPI_GetPriceByCode(user_id,prod_code,&price);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
+	json out;
+	COPY_SPApiPrice_FIELDS(price,out["price"]);
+	my_data->out=out;
+}
 //1.33
-/*
-	 Q - 关于Instrument与Product的关系。
-A: SPAPI_LoadInstrumentList是取交易所下面的产品系列都有那一些,SPAPI_LoadProductInfoListByCode 根据它的系列再取它产品的详细信息。
-WJ: 我们主要是拿HSI(恒指期货)下面的期权和期货
-*/
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
@@ -856,7 +865,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//成交相关：}
 				//行情相关：{
 				//SPAPI_SubscribePrice,//1.31 暂时我们不需要订阅，先用下面的 SPAPI_GetPriceByCode 足够做 v0.0.1
-				//SPAPI_GetPriceByCode,//1.32 TODO 重要
+				SPAPI_GetPriceByCode,//1.32 TODO 重要
 				//行情相关：}
 				//市场及产品相关{
 				SPAPI_LoadInstrumentList,//1.33

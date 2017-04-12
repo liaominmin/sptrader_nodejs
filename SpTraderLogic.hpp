@@ -240,6 +240,49 @@ SpTraderLogic::~SpTraderLogic(void){
 	ttt["tm_hour"]=tblock->tm_hour;\
 	ttt["tm_min"]=tblock->tm_min;\
 	ttt["tm_sec"]=tblock->tm_sec;
+#define COPY_SPApiPos_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				Qty,\
+				DepQty,\
+				LongQty,\
+				ShortQty,\
+				TotalAmt,\
+				DepTotalAmt,\
+				LongTotalAmt,\
+				ShortTotalAmt,\
+				PLBaseCcy,\
+				PL,\
+				ExchangeRate,\
+				AccNo,\
+				ProdCode,\
+				LongShort,\
+				DecInPrice,\
+				))
+#define COPY_SPApiTicker_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				Price,\
+				Qty,\
+				TickerTime,\
+				DealSrc,\
+				ProdCode,\
+				DecInPrice,\
+				))
+#define COPY_SPApiProduct_FIELDS(sss,ttt)\
+	ITR2(COPY_STF,sss,ttt,EXPAND(\
+				ProdCode,\
+				ProdType,\
+				ProdName,\
+				Underlying,\
+				InstCode,\
+				ExpiryDate,\
+				CallPut,\
+				Strike,\
+				LotSize,\
+				ProdName1,\
+				ProdName2,\
+				OptStyle,\
+				TickSize,\
+				))
 #define COPY_SPApiPrice_FIELDS(sss,ttt)\
 	ITR2(COPY_STF,sss,ttt,EXPAND(\
 				BidQty[SP_MAX_DEPTH],\
@@ -440,7 +483,6 @@ void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 //3
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
-	//cout << "Order Request Failed: Order#"  << order->IntOrderNo << " [" << err_code << " (" +string(err_msg) << ")], Action=" << action << " ClorderId=" +string(order->ClOrderId) << endl;
 	json j;
 	COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	j["action"]=action;
@@ -512,33 +554,19 @@ void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
 //11
 void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
 {
-	struct tm *tblock;
-	time_t TheTime = ticker->TickerTime;
-	tblock = localtime(&TheTime);
-	cout <<"Ticker:"+ string(ticker->ProdCode)<< '\t' << ticker->Price << '\t' << ticker->Qty << '\t' << tblock->tm_hour <<":"<< tblock->tm_min << ":" << tblock->tm_sec << endl;
 	json j;
-	j["ticker"]["ProdCode"]=ticker->ProdCode;
-	j["ticker"]["Price"]=ticker->Price;
-	j["ticker"]["Qty"]=ticker->Qty;
-	j["tblock"]["tm_hour"]=tblock->tm_hour;
-	j["tblock"]["tm_min"]=tblock->tm_min;
-	j["tblock"]["tm_sec"]=tblock->tm_sec;
+	if(NULL!=ticker){
+		COPY_SPApiTicker_FIELDS((*ticker),j["ticker"]);
+		COPY_tblock_FIELDS(ticker->TickerTime,j["tblock"]);
+	}
 	ASYNC_CALLBACK_FOR_ON(TickerUpdate,j);
 }
 //12
 void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 {
-	//cout << "Order Report [acc_no:" +string(order->AccNo) << "] Status=" << string(OutputOrderStatus(order->Status)) << " Order#" << order->IntOrderNo << " ProdCode="+string(order->ProdCode);
-	cout << " Price=" << order->Price << " Qty=" << order->Qty << " TradedQty=" << order->TradedQty << " TotalQty=" << order->TotalQty;
-	cout << " ClOrderId=" +string(order->ClOrderId) << endl;
 	json j;
 	j["rec_no"]=rec_no;
-	j["order"]["Price"]=order->Price;
-	j["order"]["Qty"]=order->Qty;
-	j["order"]["TradedQty"]=order->TradedQty;
-	j["order"]["TotalQty"]=order->TotalQty;
-	j["order"]["ClOrderId"]=string(order->ClOrderId);
-	//j["order"]["IntOrderNo"]=order->IntOrderNo;
+	COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderReport,j);
 }
 //13
@@ -560,7 +588,7 @@ void SpTraderLogic::OnBusinessDateReply(long business_date)
 //15
 void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 {
-	cout << "OnConnectedReply(" << host_type << "," << conn_status << endl;
+	cout << "OnConnectedReply=" << host_type << "," << conn_status << endl;
 	json j;
 	j["host_type"]=host_type;
 	j["conn_status"]=conn_status;
@@ -569,7 +597,6 @@ void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 //16
 void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
 {
-	cout << "Account Login Reply: acc_no="+ string(accNo) << " ret_code="<< ret_code << " ret_msg="+ string(ret_msg)  << endl;
 	json j;
 	j["accNo"]=accNo;
 	j["ret_code"]=ret_code;
@@ -579,7 +606,6 @@ void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_ms
 //17
 void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
 {
-	cout << "Account Logout Reply:  ret_code="<< ret_code << " ret_msg="+ string(ret_msg)  << endl;
 	json j;
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=ret_msg;
@@ -588,62 +614,27 @@ void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
 //18
 void SpTraderLogic::OnAccountInfoPush(const SPApiAccInfo *acc_info)
 {
-	cout <<"AccInfo: acc_no="+ string(acc_info->ClientId)<< " AE="+ string(acc_info->AEId)<< " BaseCcy="+ string(acc_info->BaseCcy) << endl;
 	json j;
-	j["acc_info"]["ClientId"]=string(acc_info->ClientId);
-	j["acc_info"]["AEId"]=string(acc_info->AEId);
-	j["acc_info"]["BaseCcy"]=string(acc_info->BaseCcy);
-	ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
+	COPY_SPApiAccInfo_FIELDS((*acc_info),j["acc_info"])
+		ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
 }
 //19
 void SpTraderLogic::OnAccountPositionPush(const SPApiPos *pos)
 {
-	int p_qty;
-	if (pos->LongShort == 'B') p_qty = pos->Qty;
-	else p_qty = -1 *pos->Qty;
-	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
-	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
-	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
-	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;
 	json j;
-	j["p_qty"]=p_qty;
-	j["pos"]["TotalAmt"]=pos->TotalAmt;
-	j["pos"]["LongQty"]=pos->LongQty;
-	j["pos"]["LongTotalAmt"]=pos->LongTotalAmt;
-	j["pos"]["ShortQty"]=pos->ShortQty;
-	j["pos"]["ShortTotalAmt"]=pos->ShortTotalAmt;
-	j["pos"]["PLBaseCcy"]=pos->PLBaseCcy;
-	j["pos"]["PL"]=pos->PL;
-	j["pos"]["ExchangeRate"]=pos->ExchangeRate;
+	COPY_SPApiPos_FIELDS((*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(AccountPositionPush,j);
 }
 //20
 void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
 {
-	int p_qty;
-	if (pos->LongShort == 'B') p_qty = pos->Qty;
-	else p_qty = -1 *pos->Qty;
-	cout <<"Pos: ProdCode="+ string(pos->ProdCode)<< " Prev="<< p_qty << "@"<< pos->TotalAmt;
-	cout <<" DayLong="<< pos->LongQty << "@"<< pos->LongTotalAmt;
-	cout <<" DayShort="<< pos->ShortQty << "@"<< pos->ShortTotalAmt;
-	cout <<" PLBaseCcy="<< pos->PLBaseCcy << " PL="<< pos->PL << " ExcRate=" << pos->ExchangeRate << endl;
 	json j;
-	j["p_qty"]=p_qty;
-	j["pos"]["TotalAmt"]=pos->TotalAmt;
-	j["pos"]["LongQty"]=pos->LongQty;
-	j["pos"]["LongTotalAmt"]=pos->LongTotalAmt;
-	j["pos"]["ShortQty"]=pos->ShortQty;
-	j["pos"]["ShortTotalAmt"]=pos->ShortTotalAmt;
-	j["pos"]["PLBaseCcy"]=pos->PLBaseCcy;
-	j["pos"]["PL"]=pos->PL;
-	j["pos"]["ExchangeRate"]=pos->ExchangeRate;
+	COPY_SPApiPos_FIELDS((*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountPositionPush,j);
 }
 //21
 void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 {
-	cout <<"AccBal: Ccy=" +string(acc_bal->Ccy) << " CashBf=" << acc_bal->CashBf << " NotYetValue=" << acc_bal->NotYetValue << " TodayCash=" << acc_bal->TodayCash;
-	cout <<" TodayOut=" << acc_bal->TodayOut << " Unpresented=" << acc_bal->Unpresented << endl;
 	json j;
 	COPY_SPApiAccBal_FIELDS((*acc_bal),j["acc_bal"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
@@ -651,7 +642,6 @@ void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 //22
 void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
 {
-	printf("\nProductListByCodeReply(inst code:%s):%s. Ret Msg:%s\n", inst_code, is_ready?"Ok":"No", ret_msg);
 	json j;
 	j["inst_code"]=inst_code;
 	j["ret_msg"]=ret_msg;
@@ -661,8 +651,6 @@ void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, cha
 //23
 void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 {
-	if (ret_code == 0)cout << "Account Control Succeed" << endl;
-	else cout << "Account Control Failed [ret_code:"<< ret_code << " msg:"<< string(ret_msg) << "]" << endl;
 	json j;
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=string(ret_msg);
@@ -727,10 +715,10 @@ inline void SPAPI_GetPosCount(ShareDataCall * my_data){
 }
 //1.33
 /*
-Q - 关于Instrument与Product的关系。
+	 Q - 关于Instrument与Product的关系。
 A: SPAPI_LoadInstrumentList是取交易所下面的产品系列都有那一些,SPAPI_LoadProductInfoListByCode 根据它的系列再取它产品的详细信息。
-WJ: 我们主要是拿期权(HSI)和期货
- */
+WJ: 我们主要是拿HSI(恒指期货)下面的期权和期货
+*/
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
@@ -759,10 +747,7 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json out;
 	for (int i = 0; i < apiProdList.size(); i++) {
 		SPApiProduct& prod = apiProdList[i];
-		out[i]["ProdCode"]=prod.ProdCode;
-		out[i]["ProdName"]=prod.ProdName;
-		out[i]["InstCode"]=prod.InstCode;
-		//printf("\n Number:%d  ProdCode=%s , ProdName=%s , InstCode=%s ",i+1, prod.ProdCode, prod.ProdName, prod.InstCode);
+		COPY_SPApiProduct_FIELDS(prod,out[i]);
 	}
 	my_data->out=out;
 }
@@ -774,9 +759,7 @@ inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 	memset(&prod, 0, sizeof(SPApiProduct));
 	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 	json out;
-	out["ProdCode"]=prod.ProdCode;
-	out["ProdName"]=prod.ProdName;
-	out["InstCode"]=prod.InstCode;
+	COPY_SPApiProduct_FIELDS(prod,out);
 	my_data->out=out;
 }
 //1.42
@@ -810,13 +793,12 @@ inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	{
 		json out;
 		COPY_SPApiAccInfo_FIELDS(acc_info,out["acc_info"])
-		my_data->out=out;
+			my_data->out=out;
 	}
 }
 //1.50
 inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 	json in=my_data->in;
-	//char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
 	COPY_TO_STR(in["ver_no"],ver_no);
 	COPY_TO_STR(in["rel_no"],rel_no);
 	COPY_TO_STR(in["suffix"],suffix);

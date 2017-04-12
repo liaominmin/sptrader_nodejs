@@ -1,5 +1,9 @@
 # TODO if have uncommit, warn and stop......
 
+MYROOT=$(cd `dirname $0`; pwd)
+
+cd $MYROOT
+
 local_name=`whoami`_local
 
 sync_remote=sync_remote

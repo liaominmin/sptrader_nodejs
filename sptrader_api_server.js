@@ -42,15 +42,15 @@ var sptrader=new Proxy(//sptraderModule
 			rt=methods[mmm]=new Proxy(()=>{},{
 				apply: function(target, thisArg, argumentsList){
 					if(mmm=='on'){
-						logger.log('on=',argumentsList);
+						//logger.log('on=',argumentsList);
 						return sptraderModule[mmm].apply(target,argumentsList);
 					}else if(mmm=='call'){
-						logger.log('call=',argumentsList);
+						//logger.log('call=',argumentsList);
 						return sptraderModule[mmm].apply(target,argumentsList);
 					}else{
 						var newargumentsList=argumentsList;
 						newargumentsList.unshift(mmm);
-						logger.log(mmm,'.',newargumentsList);
+						//logger.log(mmm,'.',newargumentsList);
 						return sptraderModule.call.apply(sptraderModule,newargumentsList);
 					}
 				}

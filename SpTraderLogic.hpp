@@ -237,6 +237,55 @@ SpTraderLogic::~SpTraderLogic(void){
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define COPY_SPApiAccInfo_FIELDS(sss,ttt)\
+	ttt["NAV"]=sss.NAV;\
+	ttt["BuyingPower"]=sss.BuyingPower;\
+	ttt["CashBal"]=sss.CashBal;\
+	ttt["MarginCall"]=sss.MarginCall;\
+	ttt["CommodityPL"]=sss.CommodityPL;\
+	ttt["LockupAmt"]=sss.LockupAmt;\
+	ttt["CreditLimit"]=sss.CreditLimit;\
+	ttt["MaxMargin"]=sss.MaxMargin;\
+	ttt["MaxLoanLimit"]=sss.MaxLoanLimit;\
+	ttt["TradingLimit"]=sss.TradingLimit;\
+	ttt["RawMargin"]=sss.RawMargin;\
+	ttt["IMargin"]=sss.IMargin;\
+	ttt["MMargin"]=sss.MMargin;\
+	ttt["TodayTrans"]=sss.TodayTrans;\
+	ttt["LoanLimit"]=sss.LoanLimit;\
+	ttt["TotalFee"]=sss.TotalFee;\
+	ttt["LoanToMR"]=sss.LoanToMR;\
+	ttt["LoanToMV"]=sss.LoanToMV;\
+	ttt["AccName"]=sss.AccName;\
+	ttt["BaseCcy"]=sss.BaseCcy;\
+	ttt["MarginClass"]=sss.MarginClass;\
+	ttt["TradeClass"]=sss.TradeClass;\
+	ttt["ClientId"]=sss.ClientId;\
+	ttt["AEId"]=sss.AEId;\
+	ttt["AccType"]=sss.AccType;\
+	ttt["CtrlLevel"]=sss.CtrlLevel;\
+	ttt["Active"]=sss.Active;\
+	ttt["MarginPeriod"]=sss.MarginPeriod;\
+	ttt["AccNameUtf8"]=big2utf8(sss.AccName);
+#define COPY_SPApiInstrument_FIELDS(sss,ttt)\
+	ttt["Margin"]=sss.Margin;\
+	ttt["ContractSize"]=sss.ContractSize;\
+	ttt["MarketCode"]=sss.MarketCode;\
+	ttt["InstCode"]=sss.InstCode;\
+	ttt["InstName"]=sss.InstName;\
+	ttt["InstName1"]=sss.InstName1;\
+	ttt["InstName2"]=sss.InstName2;\
+	ttt["Ccy"]=sss.Ccy;\
+	ttt["DecInPrice"]=sss.DecInPrice;\
+	ttt["InstType"]=sss.InstType;\
+	ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
+#define COPY_SPApiAccBal_FIELDS(sss,ttt)\
+	ttt["CashBf"]=sss.CashBf;\
+	ttt["TodayCash"]=sss.TodayCash;\
+	ttt["NotYetValue"]=sss.NotYetValue;\
+	ttt["Unpresented"]=sss.Unpresented;\
+	ttt["TodayOut"]=sss.TodayOut;\
+	ttt["Ccy"]=sss.Ccy;
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	ShareDataOn * req_data = new ShareDataOn;\
 	req_data->strCallback=string(#$callbackName);\
@@ -451,6 +500,7 @@ void SpTraderLogic::OnBusinessDateReply(long business_date)
 //15
 void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 {
+	cout << "OnConnectedReply(" << host_type << "," << conn_status << endl;
 	json j;
 	j["host_type"]=host_type;
 	j["conn_status"]=conn_status;
@@ -535,12 +585,13 @@ void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 	cout <<"AccBal: Ccy=" +string(acc_bal->Ccy) << " CashBf=" << acc_bal->CashBf << " NotYetValue=" << acc_bal->NotYetValue << " TodayCash=" << acc_bal->TodayCash;
 	cout <<" TodayOut=" << acc_bal->TodayOut << " Unpresented=" << acc_bal->Unpresented << endl;
 	json j;
-	j["acc_bal"]["Ccy"]=string(acc_bal->Ccy);
-	j["acc_bal"]["CashBf"]=acc_bal->CashBf;
-	j["acc_bal"]["NotYetValue"]=acc_bal->NotYetValue;
-	j["acc_bal"]["TodayCash"]=acc_bal->TodayCash;
-	j["acc_bal"]["TodayOut"]=acc_bal->TodayOut;
-	j["acc_bal"]["Unpresented"]=acc_bal->Unpresented;
+	COPY_SPApiAccBal_FIELDS((*acc_bal),j["acc_bal"]);
+	//j["acc_bal"]["Ccy"]=string(acc_bal->Ccy);
+	//j["acc_bal"]["CashBf"]=acc_bal->CashBf;
+	//j["acc_bal"]["NotYetValue"]=acc_bal->NotYetValue;
+	//j["acc_bal"]["TodayCash"]=acc_bal->TodayCash;
+	//j["acc_bal"]["TodayOut"]=acc_bal->TodayOut;
+	//j["acc_bal"]["Unpresented"]=acc_bal->Unpresented;
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
 }
 //22
@@ -630,34 +681,11 @@ inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
 }
 //1.35
-#define COPY_SPApiInstrument_FIELDS(sss,ttt)\
-	ttt["Margin"]=sss.Margin;\
-	ttt["ContractSize"]=sss.ContractSize;\
-	ttt["MarketCode"]=sss.MarketCode;\
-	ttt["InstCode"]=sss.InstCode;\
-	ttt["InstName"]=sss.InstName;\
-	ttt["InstName1"]=sss.InstName1;\
-	ttt["InstName2"]=sss.InstName2;\
-	ttt["Ccy"]=sss.Ccy;\
-	ttt["DecInPrice"]=sss.DecInPrice;\
-	ttt["InstType"]=sss.InstType;\
-	ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
 inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	json in=my_data->in;
 	vector<SPApiInstrument> apiInstList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
 	json out;
-	/* double Margin;
-		 double ContractSize;
-		 STR16 MarketCode; //市场代码
-		 STR16 InstCode; //产品系列代码
-		 STR40 InstName; //英文名称
-		 STR40 InstName1; //繁体名称
-		 STR40 InstName2; //简体名称
-		 STR4 Ccy; //产品系列的交易币种
-		 char DecInPrice; //产品系列的小数位
-		 char InstType; //产品系列的类型
-		 */
 	for (int i = 0; i < apiInstList.size(); i++) {
 		SPApiInstrument& inst = apiInstList[i];
 		COPY_SPApiInstrument_FIELDS(inst,out[i]);
@@ -706,89 +734,12 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	vector<SPApiAccBal> apiAccBalList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
 	json out;
-	/* typedef struct {
-		 double CashBf; //上日结余
-		 double TodayCash; //今日存取
-		 double NotYetValue; //未交收
-		 double Unpresented; //未兑现
-		 double TodayOut; //提取要求
-		 STR4 Ccy; //货币
-		 } SPApiAccBal;
-		 现金结余 = CashBf + TodayCash + NotYetValue
-		 参考兑换率：请参考GetCcyRate。
-		 现金(基本货币) 现金结余 * 兑换率
-		 */
 	for (int i = 0; i < apiAccBalList.size(); i++) {
 		SPApiAccBal& val = apiAccBalList[i];
-		out[i]["CashBf"]=val.CashBf;
-		out[i]["TodayCash"]=val.TodayCash;
-		out[i]["NotYetValue"]=val.NotYetValue;
-		out[i]["Unpresented"]=val.Unpresented;
-		out[i]["TodayOut"]=val.TodayOut;
-		out[i]["Ccy"]=val.Ccy;
+		COPY_SPApiAccBal_FIELDS(val,out[i]);
 	}
 	my_data->out=out;
 }
-/* typedef struct {
-	 double NAV; //资产净值
-	 double BuyingPower; //购买力
-	 double CashBal; //现金结余
-	 double MarginCall; //追收金额
-	 double CommodityPL; //商品盈亏
-	 double LockupAmt; //冻结金额
-	 double CreditLimit; //信贷限额
-	 double MaxMargin; //最高保证金
-	 double MaxLoanLimit; //最高借贷上限
-	 double TradingLimit; //信用交易额
-	 double RawMargin; //原始保证金
-	 double IMargin; //基本保证金
-	 double MMargin; //维持保证金
-	 double TodayTrans; //交易金额
-	 double LoanLimit; //证券可按总值
-	 double TotalFee; //费用总额
-	 double LoanToMR //借贷/可按值%
-	 double LoanToMV //借贷/市值%
-	 STR16 AccName; //名称
-	 STR4 BaseCcy; //基本币种
-	 STR16 MarginClass; //保证金类别
-	 STR16 TradeClass; //交易额别
-	 STR16 ClientId; //客户
-	 STR16 AEId; // 经纪
-	 char AccType; //户口类别
-	 char CtrlLevel; //控制级数
-	 char Active; // 生效
-	 char MarginPeriod; //时段
-	 } SPApiAccInfo; */
-#define COPY_SPApiAccInfo_FIELDS(sss,ttt)\
-	ttt["NAV"]=sss.NAV;\
-	ttt["BuyingPower"]=sss.BuyingPower;\
-	ttt["CashBal"]=sss.CashBal;\
-	ttt["MarginCall"]=sss.MarginCall;\
-	ttt["CommodityPL"]=sss.CommodityPL;\
-	ttt["LockupAmt"]=sss.LockupAmt;\
-	ttt["CreditLimit"]=sss.CreditLimit;\
-	ttt["MaxMargin"]=sss.MaxMargin;\
-	ttt["MaxLoanLimit"]=sss.MaxLoanLimit;\
-	ttt["TradingLimit"]=sss.TradingLimit;\
-	ttt["RawMargin"]=sss.RawMargin;\
-	ttt["IMargin"]=sss.IMargin;\
-	ttt["MMargin"]=sss.MMargin;\
-	ttt["TodayTrans"]=sss.TodayTrans;\
-	ttt["LoanLimit"]=sss.LoanLimit;\
-	ttt["TotalFee"]=sss.TotalFee;\
-	ttt["LoanToMR"]=sss.LoanToMR;\
-	ttt["LoanToMV"]=sss.LoanToMV;\
-	ttt["AccName"]=sss.AccName;\
-	ttt["BaseCcy"]=sss.BaseCcy;\
-	ttt["MarginClass"]=sss.MarginClass;\
-	ttt["TradeClass"]=sss.TradeClass;\
-	ttt["ClientId"]=sss.ClientId;\
-	ttt["AEId"]=sss.AEId;\
-	ttt["AccType"]=sss.AccType;\
-	ttt["CtrlLevel"]=sss.CtrlLevel;\
-	ttt["Active"]=sss.Active;\
-	ttt["MarginPeriod"]=sss.MarginPeriod;\
-	ttt["AccNameUtf8"]=big2utf8(sss.AccName);
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;

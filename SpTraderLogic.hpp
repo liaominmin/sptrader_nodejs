@@ -74,7 +74,6 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//string
 ApiProxyWrapper apiProxyWrapper;
-
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -112,7 +111,6 @@ std::string big2utf8(const char* in)
 {
 	return any2utf8(std::string(in),std::string("big5"),std::string("utf-8"));
 }
-
 struct ShareDataOn //for on()
 {
 	uv_work_t request;//@ref uv_queue_work()
@@ -178,11 +176,10 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	Local<String> in_##kkk = Local<String>::Cast(aaa);\
 	char kkk[255]={0};\
 	V8ToCharPtr(in_##kkk,kkk);
-
 #define HANDLE_IN_TO_INT(aaa,kkk)\
 	int kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
-#define HANDLE_IN_TO_LONG(aaa,kkk)\
+#define HANDLE_IN_TO_LNG(aaa,kkk)\
 	long kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
 #define HANDLE_IN_TO_STR_LEN(aaa,kkk,len)\
@@ -218,7 +215,6 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 			}\
 		}\
 		int rc=0;
-
 #define METHOD_END_ONCALL($methodname)\
 		rt->Set(String::NewFromUtf8(isolate,"api"), String::NewFromUtf8(isolate,#$methodname));\
 		rt->Set(String::NewFromUtf8(isolate,"in"), in);\
@@ -226,7 +222,6 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 		rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,rc));\
 		args.GetReturnValue().Set(rt);\
 	}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SpTraderLogic::SpTraderLogic(void){
 	apiProxyWrapper.SPAPI_Initialize();//1.1
@@ -614,7 +609,6 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALLBACK_FOR_ON(AccountControlReply,j);
 }
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ShareDataCall
 {
@@ -661,12 +655,17 @@ inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
 	json in=my_data->in;
 	HANDLE_IN_TO_STR(in["user_id"],user_id);
 	HANDLE_IN_TO_STR(in["acc_no"],acc_no);
-	HANDLE_IN_TO_LONG(in["accOrderNo"],accOrderNo);
+	HANDLE_IN_TO_LNG(in["accOrderNo"],accOrderNo);
 	HANDLE_IN_TO_STR(in["productCode"],productCode);
 	HANDLE_IN_TO_STR(in["clOrderId"],clOrderId);
 	my_data->rc = apiProxyWrapper.SPAPI_DeleteOrderBy(user_id,acc_no,accOrderNo,productCode,clOrderId);
 }
-
+//1.24
+inline void SPAPI_GetPosCount(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	my_data->rc = apiProxyWrapper.SPAPI_GetPosCount(user_id);
+}
 //1.33
 /*
 Q - 关于Instrument与Product的关系。
@@ -744,7 +743,6 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
 	HANDLE_IN_TO_STR(in["user_id"],user_id);
-
 	SPApiAccInfo acc_info;
 	memset(&acc_info, 0, sizeof(SPApiAccInfo));
 	int rc;
@@ -781,8 +779,7 @@ inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 }
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
 std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
-	ITR(DFN_FNC_PTR,EXPAND(
-				//API 20161216:
+	ITR(DFN_FNC_PTR,EXPAND( //API 20161216:
 				//SPAPI_Initialize,//1.1
 				//SPAPI_Uninitialize,//1.2
 				//SPAPI_SetLanguageId,//1.3
@@ -791,7 +788,6 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_Logout,//1.6
 				//SPAPI_ChangePassword,//1.7
 				SPAPI_GetLoginStatus,//1.8
-
 				//下单相关：{ TODO
 				//SPAPI_AddOrder,//1.9 TODO
 				//SPAPI_AddInactiveOrder,//1.10
@@ -809,54 +805,49 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_InactivateAllOrders,//1.22
 				//SPAPI_SendMarketMakingOrder,//1.23
 				//下单相关：}
-
 				//持仓相关：{
-				//SPAPI_GetPosCount,//1.24 TODO
+				SPAPI_GetPosCount,//1.24 TODO
 				//SPAPI_GetAllPos,//1.25 TODO
 				//SPAPI_GetAllPosByArray,//1.26 TODO
 				//SPAPI_GetPosByProduct,//1.27 TODO
 				//持仓相关：}
-
 				//成交相关：{
 				//SPAPI_GetTradeCount,//1.28 TODO
 				//SPAPI_GetAllTrades,//1.29 TODO
 				//SPAPI_GetAllTradeByArray,//1.30 TODO
 				//成交相关：}
-
 				//行情相关：{
 				//SPAPI_SubscribePrice,//1.31 暂时我们不需要订阅，先用下面的 SPAPI_GetPriceByCode 足够做 v0.0.1
 				//SPAPI_GetPriceByCode,//1.32 TODO 重要
 				//行情相关：}
-
 				//市场及产品相关{
-		SPAPI_LoadInstrumentList,//1.33
-		SPAPI_GetInstrumentCount,//1.34 作用不大，先忽略.
-		SPAPI_GetInstrument,//1.35 获得市场信息,Instrument其实跟市场差不多，估计用市场歧义多，所以他们用这个TERMS(Instrument)
-		//SPAPI_GetInstrumentByArray,//1.36 暂时不需要，用1.35先顶着用.
-		//SPAPI_GetInstrumentByCode,//1.37 暂时没用,后面可能需要更新单个市场信息设定时可能需要.
-		//SPAPI_GetProductCount,//1.38 TODO
-		SPAPI_GetProduct,//1.39
-		//SPAPI_GetProductByArray,//1.40 暂时没用
-		SPAPI_GetProductByCode,//1.41
-		//产品相关：}
-
-		//以下为帐号及其它：
-		SPAPI_GetAccBalCount,//1.42 //获取现金结余的数量
-		SPAPI_GetAllAccBal,//1.43,注：此方法如果是AE登入需要AccountLogin一个客户才能取客户数据.
-		//SPAPI_GetAllAccBalByArray,//1.44 暂时没用
-		//SPAPI_GetAccBalByCurrency,//1.45 暂时没用
-		//SPAPI_SubscribeTicker,//1.46 TODO
-		//SPAPI_SubscribeQuoteRequest,//1.47 TODO
-		//SPAPI_SubscribeAllQuoteRequest,//1.48 TODO
-		SPAPI_GetAccInfo,//1.49
-		SPAPI_GetDllVersion,//1.50
-		SPAPI_LoadProductInfoListByCode,//1.51
-		//SPAPI_SetApiLogPath,//1.52 暂时没用
-		//SPAPI_GetCcyRateByCcy,//1.53 暂时没用
-		//SPAPI_AccountLogin,//1.54 该方法只针对AE,当AE登录后可选择性登录账户
-		//SPAPI_AccountLogout,//1.55 暂时没用
-		//SPAPI_SendAccControl,//1.56 暂时没用
-		))
+				SPAPI_LoadInstrumentList,//1.33
+				SPAPI_GetInstrumentCount,//1.34 作用不大，先忽略.
+				SPAPI_GetInstrument,//1.35 获得市场信息,Instrument其实跟市场差不多，估计用市场歧义多，所以他们用这个TERMS(Instrument)
+				//SPAPI_GetInstrumentByArray,//1.36 暂时不需要，用1.35先顶着用.
+				//SPAPI_GetInstrumentByCode,//1.37 暂时没用,后面可能需要更新单个市场信息设定时可能需要.
+				//SPAPI_GetProductCount,//1.38 TODO
+				SPAPI_GetProduct,//1.39
+				//SPAPI_GetProductByArray,//1.40 暂时没用
+				SPAPI_GetProductByCode,//1.41
+				//产品相关：}
+				//以下为帐号及其它：
+				SPAPI_GetAccBalCount,//1.42 //获取现金结余的数量
+				SPAPI_GetAllAccBal,//1.43,注：此方法如果是AE登入需要AccountLogin一个客户才能取客户数据.
+				//SPAPI_GetAllAccBalByArray,//1.44 暂时没用
+				//SPAPI_GetAccBalByCurrency,//1.45 暂时没用
+				//SPAPI_SubscribeTicker,//1.46 TODO
+				//SPAPI_SubscribeQuoteRequest,//1.47 TODO
+				//SPAPI_SubscribeAllQuoteRequest,//1.48 TODO
+				SPAPI_GetAccInfo,//1.49
+				SPAPI_GetDllVersion,//1.50
+				SPAPI_LoadProductInfoListByCode,//1.51
+				//SPAPI_SetApiLogPath,//1.52 暂时没用
+				//SPAPI_GetCcyRateByCcy,//1.53 暂时没用
+				//SPAPI_AccountLogin,//1.54 该方法只针对AE,当AE登录后可选择性登录账户
+				//SPAPI_AccountLogout,//1.55 暂时没用
+				//SPAPI_SendAccControl,//1.56 暂时没用
+				))
 };
 void worker_for_call(uv_work_t * req){
 	// This method will run in a seperate thread where you can do your blocking background work.

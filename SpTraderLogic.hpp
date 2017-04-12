@@ -2,16 +2,13 @@
 #include "include/ApiProxyWrapperReply.h"
 #include "macromagic.h"
 #include <v8.h>
-using namespace v8;
-#define EXPORT_DECLARE(fff) void fff(const FunctionCallbackInfo<Value>& args);
+#define EXPORT_DECLARE(fff) void fff(const v8::FunctionCallbackInfo<v8::Value>& args);
 class SpTraderLogic : public ApiProxyWrapperReply
 {
 	public:
 		SpTraderLogic(void);
 		~SpTraderLogic(void);
-		//declare the module methods iterally:
-		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));
-		//@ref ApiProxyWrapperReply && API DOC (Callback):
+		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));//declare the module methods iterally:
 		//0
 		virtual void OnTest();
 		//1
@@ -62,17 +59,12 @@ class SpTraderLogic : public ApiProxyWrapperReply
 		virtual void OnApiAccountControlReply(long ret_code, char *ret_msg);
 };
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include <stdio.h>
-//#include <unistd.h>//...
-//#include <ctype.h>//...
-//#include <time.h> //for localtime
-//#include <node.h> //...
 #include <uv.h> //uv_work_t uv_queue_work uv_default_loop
 #include "json.hpp" //https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp
 using json = nlohmann::json;
 #include <iostream> //for cout << .... << endl
 #include <map>
-using namespace std;//string
+using namespace std;//for string
 ApiProxyWrapper apiProxyWrapper;
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
@@ -82,11 +74,9 @@ int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,ch
 	char **pin = &inbuf;
 	char **pout = &outbuf;
 	cd = iconv_open(to_charset,from_charset);
-	if (cd==0)
-		return -1;
+	if (cd==0) return -1;
 	memset(outbuf,0,outlen);
-	if (iconv(cd,pin,&inlen,pout,&outlen) == -1)
-		return -1;
+	if (iconv(cd,pin,&inlen,pout,&outlen) == -1) return -1;
 	iconv_close(cd);
 	return 0;
 }
@@ -97,11 +87,8 @@ std::string any2utf8(std::string in,std::string fromEncode,std::string toEncode)
 	int outlen=inlen*3;//in case unicode 3 times than ascii
 	char outbuf[outlen]={0};
 	int rst=code_convert((char*)fromEncode.c_str(),(char*)toEncode.c_str(),inbuf,inlen,outbuf,outlen);
-	if(rst==0){
-		return std::string(outbuf);
-	}else{
-		return in;
-	}
+	if(rst==0){ return std::string(outbuf);
+	}else{ return in; }
 }
 std::string gbk2utf8(const char* in)
 {
@@ -123,25 +110,24 @@ void after_worker_for_on(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	ShareDataOn * my_data = static_cast<ShareDataOn *>(req->data);
-	Local<Function> callback = Local<Function>::New(isolate,_callback_map[my_data->strCallback]);
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->strCallback]);
 	if(!callback.IsEmpty()){
 		const unsigned argc = 1;
-		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(String::NewFromUtf8(isolate,my_data->j_rt.dump().c_str()))};
+		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->j_rt.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
 	delete my_data;
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
-	const String::Utf8Value value(v8v);
+	const v8::String::Utf8Value value(v8v);
 	const char* rt0=(*value ? *value : "<string conversion failed>");
 	strcpy(rt,rt0);
 }
-//ref:
 //https://github.com/pmed/v8pp/blob/2e0c25ebe6f478bc4ab706d6878c6b6451ba1c7e/v8pp/json.hpp
 inline std::string json_stringify(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 {
-	if (value.IsEmpty()) { return std::string("null"); }
+	if (value.IsEmpty()) { return std::string("null"); }//patch wjc
 	v8::HandleScope handle_scope(isolate);
 	v8::Local<v8::Object> theJSON = isolate->GetCurrentContext()->
 		Global()->Get(v8::String::NewFromUtf8(isolate, "JSON"))->ToObject();
@@ -168,12 +154,8 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
-#define HANDLE_JS_ARG_TO_STR_LEN(aaa,kkk,len)\
-	Local<String> in_##kkk = Local<String>::Cast(aaa);\
-	char kkk[len]={0};\
-	V8ToCharPtr(in_##kkk,kkk);
 #define HANDLE_JS_ARG_TO_STR(aaa,kkk)\
-	Local<String> in_##kkk = Local<String>::Cast(aaa);\
+	v8::Local<v8::String> in_##kkk = v8::Local<v8::String>::Cast(aaa);\
 	char kkk[255]={0};\
 	V8ToCharPtr(in_##kkk,kkk);
 #define COPY_TO_INT(aaa,kkk)\
@@ -182,12 +164,6 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 #define COPY_TO_LNG(aaa,kkk)\
 	long kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
-#define COPY_TO_STR_LEN(aaa,kkk,len)\
-	char kkk[len]={0};\
-	if(aaa.is_string()){\
-		string str_in_##kkk=aaa;\
-		strcpy(kkk,str_in_##kkk.c_str());\
-	}
 #define COPY_TO_STR(aaa,kkk)\
 	char kkk[255]={0};\
 	if(aaa.is_string()){\
@@ -195,31 +171,31 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 		strcpy(kkk,str_in_##kkk.c_str());\
 	}
 #define METHOD_START_ONCALL($methodname)\
-	void SpTraderLogic::$methodname(const FunctionCallbackInfo<Value>& args) {\
+	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
 		int args_len=args.Length();\
-		Isolate* isolate = args.GetIsolate();\
-		Local<Object> rt= Object::New(isolate);\
-		Local<Object> out= Object::New(isolate);\
-		Local<Object> in = Object::New(isolate);\
-		Local<Function> callback;\
+		v8::Isolate* isolate = args.GetIsolate();\
+		v8::Local<v8::Object> rt=  v8::Object::New(isolate);\
+		v8::Local<v8::Object> out= v8::Object::New(isolate);\
+		v8::Local<v8::Object> in = v8::Object::New(isolate);\
+		v8::Local<v8::Function> callback;\
 		if (args.Length()>0){\
 			if(args[args_len-1]->IsFunction()){\
-				callback = Local<Function>::Cast(args[args_len-1]);\
+				callback = v8::Local<v8::Function>::Cast(args[args_len-1]);\
 				if(args_len>2){\
-					in = Local<Object>::Cast(args[args_len-2]);\
+					in = v8::Local<v8::Object>::Cast(args[args_len-2]);\
 				}\
 			}else{\
 				if(args_len>1){\
-					in = Local<Object>::Cast(args[args_len-1]);\
+					in = v8::Local<v8::Object>::Cast(args[args_len-1]);\
 				}\
 			}\
 		}\
 		int rc=0;
 #define METHOD_END_ONCALL($methodname)\
-		rt->Set(String::NewFromUtf8(isolate,"api"), String::NewFromUtf8(isolate,#$methodname));\
-		rt->Set(String::NewFromUtf8(isolate,"in"), in);\
-		rt->Set(String::NewFromUtf8(isolate,"out"), out);\
-		rt->Set(String::NewFromUtf8(isolate,"rc"), Integer::New(isolate,rc));\
+		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,#$methodname));\
+		rt->Set(v8::String::NewFromUtf8(isolate,"in"), in);\
+		rt->Set(v8::String::NewFromUtf8(isolate,"out"), out);\
+		rt->Set(v8::String::NewFromUtf8(isolate,"rc"), v8::Integer::New(isolate,rc));\
 		args.GetReturnValue().Set(rt);\
 	}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -308,11 +284,13 @@ SpTraderLogic::~SpTraderLogic(void){
 				DecInPrice,\
 				Timestamp,\
 				))
-				//ExStateNo,\
-				//TradeStateNo,\
-				//Suspend,\
-				//ExpiryYMD,\
-				//ContractYMD,\
+
+//wjc:官方可能未同步:
+//ExStateNo,\
+//TradeStateNo,\
+//Suspend,\
+//ExpiryYMD,\
+//ContractYMD,\
 
 #define COPY_SPApiTrade_FIELDS(sss,ttt)\
 	ITR2(COPY_STF,sss,ttt,EXPAND(\
@@ -861,7 +839,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_SendMarketMakingOrder,//1.23
 				//下单相关：}
 				//持仓相关：{
-				SPAPI_GetPosCount,//1.24 TODO
+				SPAPI_GetPosCount,//1.24
 				//SPAPI_GetAllPos,//1.25 TODO
 				//SPAPI_GetAllPosByArray,//1.26 TODO
 				//SPAPI_GetPosByProduct,//1.27 TODO
@@ -872,8 +850,8 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_GetAllTradeByArray,//1.30 TODO
 				//成交相关：}
 				//行情相关：{
-				SPAPI_SubscribePrice,//1.31 暂时我们不需要订阅，先用下面的 SPAPI_GetPriceByCode 足够做 v0.0.1
-				SPAPI_GetPriceByCode,//1.32 TODO 重要
+				SPAPI_SubscribePrice,//1.31
+				SPAPI_GetPriceByCode,//1.32 
 				//行情相关：}
 				//市场及产品相关{
 				SPAPI_LoadInstrumentList,//1.33
@@ -932,7 +910,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
 	if(!callback.IsEmpty()){
 		const unsigned argc = 1;
-		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(String::NewFromUtf8(isolate,my_data->rst.dump().c_str()))};
+		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
 	delete my_data;
@@ -944,10 +922,7 @@ METHOD_START_ONCALL(on){
 		_callback_map[string(on)].Reset(isolate, callback);
 	}
 }METHOD_END_ONCALL(on)
-/**
- * call(m,callback) and return in/out/rc
- * async mode if has(callback),using async mode as much as possible, 'coz sync mode might block the nodejs
- */
+/* async mode if has(callback),pls use as much as possible, 'coz sync mode might block the nodejs */
 METHOD_START_ONCALL(call){
 	if(args.Length()>0){
 		HANDLE_JS_ARG_TO_STR(args[0],call);
@@ -971,7 +946,7 @@ METHOD_START_ONCALL(call){
 }METHOD_END_ONCALL(call)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
-//char* ToCString(const String::Utf8Value& value){
+//char* ToCString(const v8::String::Utf8Value& value){
 //	char* rt=(char*) (*value ? *value : "<string conversion failed>");
 //	return rt;
 //}

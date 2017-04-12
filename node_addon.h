@@ -5,7 +5,7 @@
 #define EXPORT_NODE_METHOD(method) NODE_SET_METHOD(exports,#method,method);
 
 #define DEFINE_NODE_METHOD($method) \
-	void $method(const FunctionCallbackInfo<Value>& args){\
+	void $method(const v8::FunctionCallbackInfo<v8::Value>& args){\
 		_myLogic.$method(args);\
 	}
 
@@ -13,7 +13,7 @@
 	namespace $mdlname {\
 		$LogicClass _myLogic;\
 		ITR(DEFINE_NODE_METHOD,__VA_ARGS__);\
-		void init(Local<Object> exports){\
+		void init(v8::Local<v8::Object> exports){\
 			ITR(EXPORT_NODE_METHOD,__VA_ARGS__);\
 		}\
 		NODE_MODULE($mdlname, init)\

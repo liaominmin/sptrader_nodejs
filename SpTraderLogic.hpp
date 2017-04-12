@@ -306,13 +306,14 @@ SpTraderLogic::~SpTraderLogic(void){
 				ProdCode,\
 				ProdName,\
 				DecInPrice,\
-				ExStateNo,\
-				TradeStateNo,\
-				Suspend,\
-				ExpiryYMD,\
-				ContractYMD,\
 				Timestamp,\
 				))
+				//ExStateNo,\
+				//TradeStateNo,\
+				//Suspend,\
+				//ExpiryYMD,\
+				//ContractYMD,\
+
 #define COPY_SPApiTrade_FIELDS(sss,ttt)\
 	ITR2(COPY_STF,sss,ttt,EXPAND(\
 				RecNo,\

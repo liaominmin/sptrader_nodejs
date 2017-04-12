@@ -593,6 +593,11 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
 }
 //1.33
+/*
+Q - 关于Instrument与Product的关系。
+A: SPAPI_LoadInstrumentList是取交易所下面的产品系列都有那一些,SPAPI_LoadProductInfoListByCode 根据它的系列再取它产品的详细信息。
+WJ: 我们主要是拿期权(HSI)和期货
+ */
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
@@ -601,6 +606,18 @@ inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
 }
 //1.35
+#define COPY_SPApiInstrument_FIELDS(sss,ttt)\
+	ttt["Margin"]=sss.Margin;\
+	ttt["ContractSize"]=sss.ContractSize;\
+	ttt["MarketCode"]=sss.MarketCode;\
+	ttt["InstCode"]=sss.InstCode;\
+	ttt["InstName"]=sss.InstName;\
+	ttt["InstName1"]=sss.InstName1;\
+	ttt["InstName2"]=sss.InstName2;\
+	ttt["Ccy"]=sss.Ccy;\
+	ttt["DecInPrice"]=sss.DecInPrice;\
+	ttt["InstType"]=sss.InstType;\
+	ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
 inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	json in=my_data->in;
 	vector<SPApiInstrument> apiInstList;
@@ -619,16 +636,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 		 */
 	for (int i = 0; i < apiInstList.size(); i++) {
 		SPApiInstrument& inst = apiInstList[i];
-		out[i]["Margin"]=inst.Margin;
-		out[i]["MarketCode"]=inst.MarketCode;
-		out[i]["InstCode"]=inst.InstCode;
-		out[i]["InstName"]=inst.InstName;
-		out[i]["InstName1"]=inst.InstName1;//need fix the encoding
-		out[i]["InstName2"]=inst.InstName2;//need fix the wrong encoding
-		out[i]["InstName2Utf8"]=gbk2utf8(inst.InstName2);
-		out[i]["Ccy"]=inst.Ccy;
-		out[i]["DecInPrice"]=inst.DecInPrice;
-		out[i]["InstType"]=inst.InstType;
+		COPY_SPApiInstrument_FIELDS(inst,out[i]);
 	}
 	my_data->out=out;
 }

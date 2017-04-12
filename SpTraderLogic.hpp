@@ -170,16 +170,29 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
-#define HANDLE_JS_ARG_TO_STR(aaa,kkk,len)\
+#define HANDLE_JS_ARG_TO_STR_LEN(aaa,kkk,len)\
 	Local<String> in_##kkk = Local<String>::Cast(aaa);\
 	char kkk[len]={0};\
+	V8ToCharPtr(in_##kkk,kkk);
+#define HANDLE_JS_ARG_TO_STR(aaa,kkk)\
+	Local<String> in_##kkk = Local<String>::Cast(aaa);\
+	char kkk[255]={0};\
 	V8ToCharPtr(in_##kkk,kkk);
 
 #define HANDLE_IN_TO_INT(aaa,kkk)\
 	int kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
-#define HANDLE_IN_TO_STR(aaa,kkk,len)\
+#define HANDLE_IN_TO_LONG(aaa,kkk)\
+	long kkk=0;\
+	if(aaa.is_number_integer()){ kkk=aaa; }
+#define HANDLE_IN_TO_STR_LEN(aaa,kkk,len)\
 	char kkk[len]={0};\
+	if(aaa.is_string()){\
+		string str_in_##kkk=aaa;\
+		strcpy(kkk,str_in_##kkk.c_str());\
+	}
+#define HANDLE_IN_TO_STR(aaa,kkk)\
+	char kkk[255]={0};\
 	if(aaa.is_string()){\
 		string str_in_##kkk=aaa;\
 		strcpy(kkk,str_in_##kkk.c_str());\
@@ -566,12 +579,12 @@ struct ShareDataCall
 //1.4
 inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["host"],host,256);
+	HANDLE_IN_TO_STR(in["host"],host);
 	HANDLE_IN_TO_INT(in["port"],port);
-	HANDLE_IN_TO_STR(in["license"],license,256);
-	HANDLE_IN_TO_STR(in["app_id"],app_id,256);
-	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
-	HANDLE_IN_TO_STR(in["password"],password,256);
+	HANDLE_IN_TO_STR(in["license"],license);
+	HANDLE_IN_TO_STR(in["app_id"],app_id);
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	HANDLE_IN_TO_STR(in["password"],password);
 	apiProxyWrapper.SPAPI_SetLoginInfo(host, port, license, app_id, user_id, password);
 	my_data->rc =0;
 }
@@ -582,16 +595,27 @@ inline void SPAPI_Login(ShareDataCall * my_data){
 //1.6
 inline void SPAPI_Logout(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_Logout(user_id);
 }
 //1.8
 inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
 	HANDLE_IN_TO_INT(in["host_id"],host_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
 }
+//1.17
+inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
+	json in=my_data->in;
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
+	HANDLE_IN_TO_STR(in["acc_no"],acc_no);
+	HANDLE_IN_TO_LONG(in["accOrderNo"],accOrderNo);
+	HANDLE_IN_TO_STR(in["productCode"],productCode);
+	HANDLE_IN_TO_STR(in["clOrderId"],clOrderId);
+	my_data->rc = apiProxyWrapper.SPAPI_DeleteOrderBy(user_id,acc_no,accOrderNo,productCode,clOrderId);
+}
+
 //1.33
 /*
 Q - 关于Instrument与Product的关系。
@@ -643,7 +667,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 //1.39
 inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
+	HANDLE_IN_TO_STR(in["inst_code"],inst_code);
 	vector<SPApiProduct> apiProdList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetProduct(apiProdList);
 	json out;
@@ -659,7 +683,7 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 //1.41
 inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["prod_code"],prod_code,64);
+	HANDLE_IN_TO_STR(in["prod_code"],prod_code);
 	SPApiProduct prod;
 	memset(&prod, 0, sizeof(SPApiProduct));
 	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
@@ -672,13 +696,13 @@ inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 //1.42
 inline void SPAPI_GetAccBalCount(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id,64);
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetAccBalCount(user_id);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 }
 //1.43
 inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id,64);
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
 	vector<SPApiAccBal> apiAccBalList;
 	my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
 	json out;
@@ -768,7 +792,7 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["user_id"],user_id,256);
+	HANDLE_IN_TO_STR(in["user_id"],user_id);
 
 	SPApiAccInfo acc_info;
 	memset(&acc_info, 0, sizeof(SPApiAccInfo));
@@ -785,9 +809,9 @@ inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 	json in=my_data->in;
 	//char ver_no[100]={0}, rel_no[100]={0}, suffix[100]={0};
-	HANDLE_IN_TO_STR(in["ver_no"],ver_no,100);
-	HANDLE_IN_TO_STR(in["rel_no"],rel_no,100);
-	HANDLE_IN_TO_STR(in["suffix"],suffix,100);
+	HANDLE_IN_TO_STR(in["ver_no"],ver_no);
+	HANDLE_IN_TO_STR(in["rel_no"],rel_no);
+	HANDLE_IN_TO_STR(in["suffix"],suffix);
 	my_data->rc = apiProxyWrapper.SPAPI_GetDllVersion(ver_no, rel_no, suffix);
 	json out;
 	out["ver_no"]=ver_no;
@@ -798,7 +822,7 @@ inline void SPAPI_GetDllVersion(ShareDataCall * my_data){
 //1.51
 inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 	json in=my_data->in;
-	HANDLE_IN_TO_STR(in["inst_code"],inst_code,64);
+	HANDLE_IN_TO_STR(in["inst_code"],inst_code);
 	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
 	json out;
 	out["inst_code"]=inst_code;
@@ -826,7 +850,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_GetOrderCount,//1.14
 				//SPAPI_GetActiveOrder,//1.15
 				//SPAPI_GetOrdersByArray,//1.16
-				//SPAPI_DeleteOrderBy,//1.17
+				SPAPI_DeleteOrderBy,//1.17
 				//SPAPI_DeleteAllOrders,//1.18
 				//SPAPI_ActivateOrderBy,//1.19
 				//SPAPI_ActivateAllOrderOrders,//1.20
@@ -853,12 +877,12 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_GetPriceByCode,//1.32 TODO 重要
 				//行情相关：}
 
-				//产品相关：{
+				//市场及产品相关{
 		SPAPI_LoadInstrumentList,//1.33
-		SPAPI_GetInstrumentCount,//1.34
-		SPAPI_GetInstrument,//1.35
-		//SPAPI_GetInstrumentByArray,//1.36 暂时没用
-		//SPAPI_GetInstrumentByCode,//1.37 暂时没用
+		SPAPI_GetInstrumentCount,//1.34 作用不大，先忽略.
+		SPAPI_GetInstrument,//1.35 获得市场信息,Instrument其实跟市场差不多，估计用市场歧义多，所以他们用这个TERMS(Instrument)
+		//SPAPI_GetInstrumentByArray,//1.36 暂时不需要，用1.35先顶着用.
+		//SPAPI_GetInstrumentByCode,//1.37 暂时没用,后面可能需要更新单个市场信息设定时可能需要.
 		//SPAPI_GetProductCount,//1.38 TODO
 		SPAPI_GetProduct,//1.39
 		//SPAPI_GetProductByArray,//1.40 暂时没用
@@ -918,7 +942,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 METHOD_START_ONCALL(on){
-	HANDLE_JS_ARG_TO_STR(args[0],on,64);
+	HANDLE_JS_ARG_TO_STR(args[0],on);
 	if(!callback.IsEmpty()){
 		_callback_map[string(on)].Reset(isolate, callback);
 	}
@@ -929,7 +953,7 @@ METHOD_START_ONCALL(on){
  */
 METHOD_START_ONCALL(call){
 	if(args.Length()>0){
-		HANDLE_JS_ARG_TO_STR(args[0],call,64);
+		HANDLE_JS_ARG_TO_STR(args[0],call);
 		ShareDataCall * req_data = new ShareDataCall;
 		req_data->request.data = req_data;
 		req_data->api=string(call);

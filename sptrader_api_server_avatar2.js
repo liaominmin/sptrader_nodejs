@@ -4,9 +4,9 @@ const Q=require('q');//important..
 const web=require("http");//TODO https later
 var logger=console;
 
-const StreamToString=(stream, callback)=>{
+var StreamToString=function(stream, callback){
 	var str = '';
-	stream.on('data', function(chunk) {
+	stream.on('data', function(chunk){
 		str += chunk;
 	}).on('end', function(){
 		try{
@@ -16,8 +16,7 @@ const StreamToString=(stream, callback)=>{
 		}
 	}).on('error', function(err){
 		callback(""+err);
-	})
-	;
+	});
 };
 
 module.exports = function(opts){

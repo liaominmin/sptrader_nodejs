@@ -72,8 +72,7 @@ module.exports = function(opts){
 
 			//return a empty default method() for not string 
 			if ('string'!=typeof mmm){
-				logger.log(typeof mmm);
-				logger.log('TODO mmm=',mmm);
+				logger.log('TODO2 mmm=',mmm);
 				return default_method;
 			}
 

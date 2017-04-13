@@ -26,7 +26,7 @@ var sptrader=new Proxy(//sptraderModule
 
 		//return a empty default method() for not string 
 		if ('string'!=typeof mmm){
-			logger.log('TODO mmm=',mmm);
+			logger.log('TODO1 mmm=',mmm);
 			var default_method=new Proxy(()=>{},{
 				apply: function(target, thisArg, argumentsList) {
 					return null;

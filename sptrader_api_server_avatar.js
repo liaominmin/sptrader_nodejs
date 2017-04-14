@@ -47,25 +47,25 @@ module.exports = function(opts){
 				//if the method not buffered, build one
 				rt=methods[mmm]=new Proxy(()=>{},{
 					apply: function(target2, thisArg, argumentsList){
-
-						var callParam;
-						if(mmm=='call'){
-							callParam={};
-							if(argumentsList && argumentsList.length>0){
-								callParam.m=argumentsList[0];
+						return thisArg.then((prevResult)=>{
+							logger.log('apply(',mmm,').prevResult=',prevResult);
+							var callParam;
+							if(mmm=='call'){
+								callParam={};
+								if(argumentsList && argumentsList.length>0){
+									callParam.m=argumentsList[0];
+								}
+								if(argumentsList && argumentsList.length>1){
+									callParam.p=argumentsList[1];
+								}
+							}else if(mmm=='on'){
+								throw new Error('on() is not support to call remoted!');
+							}else{
+								callParam={m:mmm};
+								if(argumentsList && argumentsList.length>0) callParam.p=argumentsList[0];
 							}
-							if(argumentsList && argumentsList.length>1){
-								callParam.p=argumentsList[1];
-							}
-						}else if(mmm=='on'){
-							throw new Error('on() is not support to call remoted!');
-						}else{
-							callParam={m:mmm};
-							if(argumentsList && argumentsList.length>0) callParam.p=argumentsList[0];
-						}
-						logger.log('client:',mmm,'(',callParam,')');
-						var SimpleRequest=function(prevResult){
-							//logger.log('at SimpleRequest prevResult=',prevResult);
+							logger.log('client:',mmm,'(',callParam,')');
+							//var SimpleRequest=function(){
 							var dfr=Q.defer();
 							var postData=o2s(callParam);
 							var reqp={
@@ -80,7 +80,9 @@ module.exports = function(opts){
 							};
 							var req=web.request(reqp,res=>{
 								StreamToString(res,s=>{
-									dfr.resolve(s2o(s));
+									//setTimeout(()=>{
+										dfr.resolve(s2o(s));
+									//},3000);//timeout for test...
 								});
 							}).on('error',err=>{
 								logger.log(`problem with request: ${err.message}`);
@@ -89,8 +91,9 @@ module.exports = function(opts){
 							req.write(postData);
 							req.end();
 							return dfr.promise;
-						};
-						return thisArg.then(SimpleRequest);
+							//return thisArg.then(dfr.promise);
+							//};
+						});
 					}
 				});
 			}

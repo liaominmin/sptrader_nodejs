@@ -77,7 +77,6 @@ module.exports = function(opts){
 			if(!methods){ methods=_target0._methods_={}; }
 			rt=methods[mmm];
 			if(!rt){
-				logger.log('TODO build !!!', mmm);
 				//if the method not buffered, build one
 				rt=methods[mmm]=new Proxy(()=>{},{
 					apply: function(target2, thisArg, argumentsList){
@@ -109,8 +108,7 @@ module.exports = function(opts){
 							req.end();
 							return dfr.promise;
 						};
-						logger.log(_target0);
-						return _target0.then(SimpleRequest);
+						return thisArg.then(SimpleRequest);
 					}
 				});
 			}

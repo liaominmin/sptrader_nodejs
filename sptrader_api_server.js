@@ -40,8 +40,10 @@ var sptraderProxy=new Proxy(//sptraderModule
 					if(mmm=='on'){
 						return sptraderModule[mmm].apply(target,argumentsList);
 					}else if(mmm=='call'){
+						logger.log('DEBUG server fwd call() argumentsList', argumentsList);
 						return sptraderModule[mmm].apply(target,argumentsList);
 					}else{
+						logger.log('DEBUG server call(',mmm,') argumentsList', argumentsList);
 						var newargumentsList=argumentsList;
 						newargumentsList.unshift(mmm);
 						return sptraderModule.call.apply(sptraderModule,newargumentsList);

@@ -1,12 +1,12 @@
 //e.g.:
 //sh run_api_server_with_docker.sh -p=1234
-//TEST curl http://127.0.0.1:1234/ -d {haha}
+//TEST curl http://127.0.0.1:1234/ -d {m:Ping}
 
 var logger=console;
 
 logger.log("__dirname=" + __dirname);
 
-logger.log(process.versions);
+logger.log("process.versions=",process.versions);
 
 function argv2o(argv){
 	var m,mm,rt={};
@@ -15,7 +15,7 @@ function argv2o(argv){
 }
 
 var argo=argv2o(process.argv);
-logger.log(argo);
+logger.log("argo=",argo);
 
 var logic=require(argo.logic||"./sptrader_api_server_demo_logic.js")({argo});
 var http_server=require('http').createServer(logic)

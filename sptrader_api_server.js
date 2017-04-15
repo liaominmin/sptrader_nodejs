@@ -17,8 +17,8 @@ function argv2o(argv){
 var argo=argv2o(process.argv);
 logger.log("argo=",argo);
 
-var logic=require(argo.logic||"./sptrader_api_server_demo_logic.js")({argo});
-var http_server=require('http').createServer(logic)
+var logicModule=require(argo.logic||"./sptrader_api_server_demo_logic.js");
+var http_server=require('http').createServer(logicModule({argo}))
 	.listen(ppp=argo.port||argo.p||4321,hhh=argo.host||argo.h||'0.0.0.0',()=>{
 		logger.log(hhh+':'+ppp);
 	});

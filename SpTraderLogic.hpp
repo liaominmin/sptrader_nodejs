@@ -124,6 +124,12 @@ inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
 	const char* rt0=(*value ? *value : "<string conversion failed>");
 	strcpy(rt,rt0);
 }
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
+//char* V8_To_c_str(const v8::String::Utf8Value& value){
+//	char* rt=(char*) (*value ? *value : "<string conversion failed>");
+//	return rt;
+//}
 //https://github.com/pmed/v8pp/blob/2e0c25ebe6f478bc4ab706d6878c6b6451ba1c7e/v8pp/json.hpp
 inline std::string json_stringify(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 {
@@ -154,7 +160,7 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
-#define HANDLE_JS_ARG_TO_STR(aaa,kkk)\
+#define COPY_V8_TO_STR(aaa,kkk)\
 	v8::Local<v8::String> in_##kkk = v8::Local<v8::String>::Cast(aaa);\
 	char kkk[255]={0};\
 	V8ToCharPtr(in_##kkk,kkk);
@@ -178,7 +184,7 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 		v8::Local<v8::Object> out= v8::Object::New(isolate);\
 		v8::Local<v8::Object> in = v8::Object::New(isolate);\
 		v8::Local<v8::Function> callback;\
-		if (args.Length()>0){\
+		if (args_len>0){\
 			if(args[args_len-1]->IsFunction()){\
 				callback = v8::Local<v8::Function>::Cast(args[args_len-1]);\
 				if(args_len>2){\
@@ -192,7 +198,6 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 		}\
 		int rc=0;
 #define METHOD_END_ONCALL($methodname)\
-		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,#$methodname));\
 		rt->Set(v8::String::NewFromUtf8(isolate,"in"), in);\
 		rt->Set(v8::String::NewFromUtf8(isolate,"out"), out);\
 		rt->Set(v8::String::NewFromUtf8(isolate,"rc"), v8::Integer::New(isolate,rc));\
@@ -209,229 +214,217 @@ SpTraderLogic::~SpTraderLogic(void){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define COPY_STF(sss,ttt,fff) ttt[#fff]=sss.fff;
-#define COPY_tblock_FIELDS(sss,ttt)\
-	struct tm *tblock;\
-	time_t TheTime = sss;\
-	tblock = localtime(&TheTime);\
-	ttt["tm_hour"]=tblock->tm_hour;\
-	ttt["tm_min"]=tblock->tm_min;\
-	ttt["tm_sec"]=tblock->tm_sec;
-#define COPY_SPApiPos_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				Qty,\
-				DepQty,\
-				LongQty,\
-				ShortQty,\
-				TotalAmt,\
-				DepTotalAmt,\
-				LongTotalAmt,\
-				ShortTotalAmt,\
-				PLBaseCcy,\
-				PL,\
-				ExchangeRate,\
-				AccNo,\
-				ProdCode,\
-				LongShort,\
-				DecInPrice,\
-				))
-#define COPY_SPApiTicker_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				Price,\
-				Qty,\
-				TickerTime,\
-				DealSrc,\
-				ProdCode,\
-				DecInPrice,\
-				))
-#define COPY_SPApiProduct_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				ProdCode,\
-				ProdType,\
-				ProdName,\
-				Underlying,\
-				InstCode,\
-				ExpiryDate,\
-				CallPut,\
-				Strike,\
-				LotSize,\
-				ProdName1,\
-				ProdName2,\
-				OptStyle,\
-				TickSize,\
-				));\
-				ttt["ProdNameUtf8"]=gbk2utf8(sss.ProdName2);
-#define COPY_SPApiPrice_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				BidQty[SP_MAX_DEPTH],\
-				BidTicket[SP_MAX_DEPTH],\
-				Ask[SP_MAX_DEPTH],\
-				AskQty[SP_MAX_DEPTH],\
-				AskTicket[SP_MAX_DEPTH],\
-				Last[SP_MAX_LAST],\
-				LastQty[SP_MAX_LAST],\
-				LastTime[SP_MAX_LAST],\
-				Equil,\
-				Open,\
-				High,\
-				Low,\
-				Close,\
-				CloseDate,\
-				TurnoverVol,\
-				TurnoverAmt,\
-				OpenInt,\
-				ProdCode,\
-				ProdName,\
-				DecInPrice,\
-				Timestamp,\
-				))
-
+//#define COPY_tblock_FIELDS(sss,ttt)\
+//	struct tm *tblock;\
+//	time_t TheTime = sss;\
+//	tblock = localtime(&TheTime);\
+//	ttt["tm_hour"]=tblock->tm_hour;\
+//	ttt["tm_min"]=tblock->tm_min;\
+//	ttt["tm_sec"]=tblock->tm_sec;
+#define COPY_SPApiPos_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			Qty,\
+			DepQty,\
+			LongQty,\
+			ShortQty,\
+			TotalAmt,\
+			DepTotalAmt,\
+			LongTotalAmt,\
+			ShortTotalAmt,\
+			PLBaseCcy,\
+			PL,\
+			ExchangeRate,\
+			AccNo,\
+			ProdCode,\
+			LongShort,\
+			DecInPrice,\
+			))
+#define COPY_SPApiTicker_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			Price,\
+			Qty,\
+			TickerTime,\
+			DealSrc,\
+			ProdCode,\
+			DecInPrice,\
+			))
+#define COPY_SPApiProduct_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			ProdCode,\
+			ProdType,\
+			ProdName,\
+			Underlying,\
+			InstCode,\
+			ExpiryDate,\
+			CallPut,\
+			Strike,\
+			LotSize,\
+			ProdName1,\
+			ProdName2,\
+			OptStyle,\
+			TickSize,\
+			));\
+			ttt["ProdNameUtf8"]=gbk2utf8(sss.ProdName2);
+#define COPY_SPApiPrice_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			BidQty[SP_MAX_DEPTH],\
+			BidTicket[SP_MAX_DEPTH],\
+			Ask[SP_MAX_DEPTH],\
+			AskQty[SP_MAX_DEPTH],\
+			AskTicket[SP_MAX_DEPTH],\
+			Last[SP_MAX_LAST],\
+			LastQty[SP_MAX_LAST],\
+			LastTime[SP_MAX_LAST],\
+			Equil,\
+			Open,\
+			High,\
+			Low,\
+			Close,\
+			CloseDate,\
+			TurnoverVol,\
+			TurnoverAmt,\
+			OpenInt,\
+			ProdCode,\
+			ProdName,\
+			DecInPrice,\
+			Timestamp,\
+			))
 //wjc:官方可能未同步:
 //ExStateNo,\
 //TradeStateNo,\
 //Suspend,\
 //ExpiryYMD,\
-//ContractYMD,\
-
-#define COPY_SPApiTrade_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				RecNo,\
-				Price,\
-				TradeNo,\
-				ExtOrderNo,\
-				IntOrderNo,\
-				Qty,\
-				TradeDate,\
-				TradeTime,\
-				AccNo,\
-				ProdCode,\
-				Initiator,\
-				Ref,\
-				Ref2,\
-				GatewayCode,\
-				ClOrderId,\
-				BuySell,\
-				OpenClose,\
-				Status,\
-				DecInPrice,\
-				OrderPrice,\
-				TradeRef,\
-				TotalQty,\
-				RemainingQty,\
-				TradedQty,\
-				AvgTradedPrice,\
-				));
-//AvgPrice,
-#define COPY_SPApiMMOrder_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				BidExtOrderNo,\
-				AskExtOrderNo,\
-				BidAccOrderNo,\
-				AskAccOrderNo,\
-				BidPrice,\
-				AskPrice,\
-				BidQty,\
-				AskQty,\
-				SpecTime,\
-				OrderOptions,\
-				ProdCode,\
-				AccNo,\
-				ClOrderId,\
-				OrderType,\
-				ValidType,\
-				DecInPrice,\
-				));
-//OrigClOrderId,//旧用户自定义参考,win's spapidll.h也没有哦.
-#define COPY_SPApiAccInfo_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				NAV,\
-				BuyingPower,\
-				CashBal,\
-				MarginCall,\
-				CommodityPL,\
-				LockupAmt,\
-				CreditLimit,\
-				MaxMargin,\
-				MaxLoanLimit,\
-				TradingLimit,\
-				RawMargin,\
-				IMargin,\
-				MMargin,\
-				TodayTrans,\
-				LoanLimit,\
-				TotalFee,\
-				LoanToMR,\
-				LoanToMV,\
-				AccName,\
-				BaseCcy,\
-				MarginClass,\
-				TradeClass,\
-				ClientId,\
-				AEId,\
-				AccType,\
-				CtrlLevel,\
-				Active,\
-				MarginPeriod,\
-				));\
-				ttt["AccNameUtf8"]=big2utf8(sss.AccName);
-#define COPY_SPApiInstrument_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				Margin,\
-				ContractSize,\
-				MarketCode,\
-				InstCode,\
-				InstName,\
-				InstName1,\
-				InstName2,\
-				Ccy,\
-				DecInPrice,\
-				InstType\
-				));\
-				ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
-#define COPY_SPApiAccBal_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				CashBf,\
-				TodayCash,\
-				NotYetValue,\
-				Unpresented,\
-				TodayOut,\
-				Ccy\
-				))
-#define COPY_SPApiOrder_FIELDS(sss,ttt)\
-	ITR2(COPY_STF,sss,ttt,EXPAND(\
-				Price,\
-				StopLevel,\
-				UpLevel,\
-				UpPrice,\
-				DownLevel,\
-				DownPrice,\
-				ExtOrderNo,\
-				IntOrderNo,\
-				Qty,\
-				TradedQty,\
-				TotalQty,\
-				ValidTime,\
-				SchedTime,\
-				TimeStamp,\
-				OrderOptions,\
-				AccNo,\
-				ProdCode,\
-				Initiator,\
-				Ref,\
-				Ref2,\
-				GatewayCode,\
-				ClOrderId,\
-				BuySell,\
-				StopType,\
-				OpenClose,\
-				CondType,\
-				OrderType,\
-				ValidType,\
-				Status,\
-				DecInPrice,\
-				OrderAction,\
-				UpdateTime,\
-				UpdateSeqNo\
-				))
+//ContractYMD,
+#define COPY_SPApiTrade_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			RecNo,\
+			Price,\
+			TradeNo,\
+			ExtOrderNo,\
+			IntOrderNo,\
+			Qty,\
+			TradeDate,\
+			TradeTime,\
+			AccNo,\
+			ProdCode,\
+			Initiator,\
+			Ref,\
+			Ref2,\
+			GatewayCode,\
+			ClOrderId,\
+			BuySell,\
+			OpenClose,\
+			Status,\
+			DecInPrice,\
+			OrderPrice,\
+			TradeRef,\
+			TotalQty,\
+			RemainingQty,\
+			TradedQty,\
+			AvgTradedPrice,\
+			));
+//wjc:AvgPrice,
+#define COPY_SPApiMMOrder_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			BidExtOrderNo,\
+			AskExtOrderNo,\
+			BidAccOrderNo,\
+			AskAccOrderNo,\
+			BidPrice,\
+			AskPrice,\
+			BidQty,\
+			AskQty,\
+			SpecTime,\
+			OrderOptions,\
+			ProdCode,\
+			AccNo,\
+			ClOrderId,\
+			OrderType,\
+			ValidType,\
+			DecInPrice,\
+			));
+//wjc:OrigClOrderId,//旧用户自定义参考,win's spapidll.h也没有哦.
+#define COPY_SPApiAccInfo_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			NAV,\
+			BuyingPower,\
+			CashBal,\
+			MarginCall,\
+			CommodityPL,\
+			LockupAmt,\
+			CreditLimit,\
+			MaxMargin,\
+			MaxLoanLimit,\
+			TradingLimit,\
+			RawMargin,\
+			IMargin,\
+			MMargin,\
+			TodayTrans,\
+			LoanLimit,\
+			TotalFee,\
+			LoanToMR,\
+			LoanToMV,\
+			AccName,\
+			BaseCcy,\
+			MarginClass,\
+			TradeClass,\
+			ClientId,\
+			AEId,\
+			AccType,\
+			CtrlLevel,\
+			Active,\
+			MarginPeriod,\
+			));\
+			ttt["AccNameUtf8"]=big2utf8(sss.AccName);
+#define COPY_SPApiInstrument_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			Margin,\
+			ContractSize,\
+			MarketCode,\
+			InstCode,\
+			InstName,\
+			InstName1,\
+			InstName2,\
+			Ccy,\
+			DecInPrice,\
+			InstType\
+			));\
+			ttt["InstName2Utf8"]=gbk2utf8(sss.InstName2);
+#define COPY_SPApiAccBal_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			CashBf,\
+			TodayCash,\
+			NotYetValue,\
+			Unpresented,\
+			TodayOut,\
+			Ccy\
+			))
+#define COPY_SPApiOrder_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+			Price,\
+			StopLevel,\
+			UpLevel,\
+			UpPrice,\
+			DownLevel,\
+			DownPrice,\
+			ExtOrderNo,\
+			IntOrderNo,\
+			Qty,\
+			TradedQty,\
+			TotalQty,\
+			ValidTime,\
+			SchedTime,\
+			TimeStamp,\
+			OrderOptions,\
+			AccNo,\
+			ProdCode,\
+			Initiator,\
+			Ref,\
+			Ref2,\
+			GatewayCode,\
+			ClOrderId,\
+			BuySell,\
+			StopType,\
+			OpenClose,\
+			CondType,\
+			OrderType,\
+			ValidType,\
+			Status,\
+			DecInPrice,\
+			OrderAction,\
+			UpdateTime,\
+			UpdateSeqNo\
+			))
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	ShareDataOn * req_data = new ShareDataOn;\
 	req_data->strCallback=string(#$callbackName);\
@@ -464,10 +457,10 @@ void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
 	json j;
-	COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	j["action"]=action;
 	j["err_code"]=err_code;
 	j["err_msg"]=err_msg;
+	if(NULL!=order) COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderRequestFailed,j);
 }
 //4
@@ -475,23 +468,23 @@ void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=0;
-	COPY_SPApiOrder_FIELDS((*order),j["order"]);
+	if(NULL!=order) COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderBeforeSendReport,j);
 }
 //5 SPAPI_RegisterMMOrderRequestFailed
 void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
 {
 	json j;
-	COPY_SPApiMMOrder_FIELDS((*mm_order),j["mm_order"]);
 	j["err_code"]=err_code;
 	j["err_msg"]=err_msg;
+	if(NULL!=mm_order) COPY_SPApiMMOrder_FIELDS((*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderRequestFailed,j);
 }
 //6
 void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 {
 	json j;
-	COPY_SPApiMMOrder_FIELDS((*mm_order),j["mm_order"]);
+	if(NULL!=mm_order) COPY_SPApiMMOrder_FIELDS((*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderBeforeSendReport,j);
 }
 //7.SPAPI_RegisterQuoteRequestReceivedReport
@@ -507,38 +500,28 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 {
 	json j;
-	COPY_SPApiTrade_FIELDS((*trade),j["trade"]);
-	COPY_tblock_FIELDS(trade->TradeTime,j["tblock"]);
+	if(NULL!=trade) COPY_SPApiTrade_FIELDS((*trade),j["trade"]);
 	ASYNC_CALLBACK_FOR_ON(TradeReport,j);
 }
 //9
 void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
 {
 	json j;
-	if(NULL!=trade){
-		COPY_SPApiTrade_FIELDS((*trade),j["trade"]);
-		COPY_tblock_FIELDS(trade->TradeTime,j["tblock"]);
-	}
+	if(NULL!=trade) COPY_SPApiTrade_FIELDS((*trade),j["trade"]);
 	ASYNC_CALLBACK_FOR_ON(LoadTradeReadyPush,j);
 }
 //10
 void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
-	if(NULL!=price){
-		COPY_SPApiPrice_FIELDS((*price),j["price"]);
-		COPY_tblock_FIELDS(price->Timestamp,j["tblock"]);
-	}
+	if(NULL!=price) COPY_SPApiPrice_FIELDS((*price),j["price"]);
 	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
 }
 //11
 void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
 {
 	json j;
-	if(NULL!=ticker){
-		COPY_SPApiTicker_FIELDS((*ticker),j["ticker"]);
-		COPY_tblock_FIELDS(ticker->TickerTime,j["tblock"]);
-	}
+	if(NULL!=ticker) COPY_SPApiTicker_FIELDS((*ticker),j["ticker"]);
 	ASYNC_CALLBACK_FOR_ON(TickerUpdate,j);
 }
 //12
@@ -546,7 +529,7 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=rec_no;
-	COPY_SPApiOrder_FIELDS((*order),j["order"]);
+	if(NULL!=order) COPY_SPApiOrder_FIELDS((*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderReport,j);
 }
 //13
@@ -568,7 +551,6 @@ void SpTraderLogic::OnBusinessDateReply(long business_date)
 //15
 void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 {
-	cout << "OnConnectedReply=" << host_type << "," << conn_status << endl;
 	json j;
 	j["host_type"]=host_type;
 	j["conn_status"]=conn_status;
@@ -595,28 +577,28 @@ void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
 void SpTraderLogic::OnAccountInfoPush(const SPApiAccInfo *acc_info)
 {
 	json j;
-	COPY_SPApiAccInfo_FIELDS((*acc_info),j["acc_info"])
-		ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
+	if(NULL!=acc_info) COPY_SPApiAccInfo_FIELDS((*acc_info),j["acc_info"]);
+	ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
 }
 //19
 void SpTraderLogic::OnAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
-	COPY_SPApiPos_FIELDS((*pos),j["pos"]);
+	if(NULL!=pos) COPY_SPApiPos_FIELDS((*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(AccountPositionPush,j);
 }
 //20
 void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
-	COPY_SPApiPos_FIELDS((*pos),j["pos"]);
+	if(NULL!=pos) COPY_SPApiPos_FIELDS((*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountPositionPush,j);
 }
 //21
 void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 {
 	json j;
-	COPY_SPApiAccBal_FIELDS((*acc_bal),j["acc_bal"]);
+	if(NULL!=acc_bal) COPY_SPApiAccBal_FIELDS((*acc_bal),j["acc_bal"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
 }
 //22
@@ -639,7 +621,7 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ShareDataCall
 {
-	uv_work_t request;//@ref uv_queue_work()
+	uv_work_t request;//@doc uv_queue_work()
 	SpTraderLogic * logic;
 	string api;//the api name
 	json in;
@@ -706,8 +688,7 @@ inline void SPAPI_GetPriceByCode(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
-	SPApiPrice price;
-	memset(&price, 0, sizeof(SPApiPrice));
+	SPApiPrice price={0};//memset(&price, 0, sizeof(SPApiPrice));
 	my_data->rc = apiProxyWrapper.SPAPI_GetPriceByCode(user_id,prod_code,&price);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 	json out;
 	COPY_SPApiPrice_FIELDS(price,out["price"]);
@@ -750,8 +731,7 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["prod_code"],prod_code);
-	SPApiProduct prod;
-	memset(&prod, 0, sizeof(SPApiProduct));
+	SPApiProduct prod={0};//memset(&prod, 0, sizeof(SPApiProduct));
 	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 	json out;
 	COPY_SPApiProduct_FIELDS(prod,out);
@@ -780,12 +760,10 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
-	SPApiAccInfo acc_info;
-	memset(&acc_info, 0, sizeof(SPApiAccInfo));
+	SPApiAccInfo acc_info={0};//memset(&acc_info, 0, sizeof(SPApiAccInfo));
 	int rc;
 	my_data->rc = rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
-	if (rc == 0)
-	{
+	if (rc == 0){
 		json out;
 		COPY_SPApiAccInfo_FIELDS(acc_info,out["acc_info"])
 			my_data->out=out;
@@ -882,9 +860,8 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_SendAccControl,//1.56 暂时没用
 				))
 };
+// NOTES: In this worker thread, you cannot access any V8/node js variables
 void worker_for_call(uv_work_t * req){
-	// This method will run in a seperate thread where you can do your blocking background work.
-	// NOTES: In this function, you cannot access any V8/node js valiables
 	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
 	json in=my_data->in;
 	string api=my_data->api;
@@ -897,7 +874,7 @@ void worker_for_call(uv_work_t * req){
 	}else{
 		json out;
 		out["STS"]="KO";
-		out["errmsg"]="TODO "+api;
+		out["errmsg"]="not found to call:"+api;
 		my_data->out=out;
 	}
 	rst["out"]=my_data->out;
@@ -915,38 +892,32 @@ void after_worker_for_call(uv_work_t * req,int status){
 	}
 	delete my_data;
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 METHOD_START_ONCALL(on){
-	HANDLE_JS_ARG_TO_STR(args[0],on);
+	COPY_V8_TO_STR(args[0],on);
 	if(!callback.IsEmpty()){
 		_callback_map[string(on)].Reset(isolate, callback);
 	}
 }METHOD_END_ONCALL(on)
 /* async mode if has(callback),pls use as much as possible, 'coz sync mode might block the nodejs */
 METHOD_START_ONCALL(call){
-	if(args.Length()>0){
-		HANDLE_JS_ARG_TO_STR(args[0],call);
+	if(args_len>0){
+		COPY_V8_TO_STR(args[0],call);
 		ShareDataCall * req_data = new ShareDataCall;
 		req_data->request.data = req_data;
 		req_data->api=string(call);
 		req_data->in=json::parse(json_stringify(isolate,in));
-		if(!callback.IsEmpty()){
+		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
 			uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
-		}else{
+		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
 			worker_for_call(& req_data->request);
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
-						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str()))
-					);
+						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
+						));
 			rc=req_data->rc;
 		}
+		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,call));
 	}
 }METHOD_END_ONCALL(call)
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
-//char* ToCString(const v8::String::Utf8Value& value){
-//	char* rt=(char*) (*value ? *value : "<string conversion failed>");
-//	return rt;
-//}

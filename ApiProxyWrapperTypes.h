@@ -210,7 +210,6 @@
 			))
 
 #define COPY_STRUCT(structName,$src,$tgt) EVAL(CAT(CAT(COPY_,structName),_FIELDS)($src,$tgt))
-//#define COPY_STRUCT(structName,$src,$tgt) EVAL(MULTICAT(COPY_,structName,_FIELDS)($src,$tgt))//TODO
 
 //---------------------------------------------------------------------------
 #endif

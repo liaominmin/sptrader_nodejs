@@ -65,14 +65,6 @@
 #define ITR1(mmm,mm1,qqq,...) EVAL( WHILE1( mmm,mm1,qqq,__VA_ARGS__) )
 #define ITR2(mmm,mm1,mm2,qqq,...) EVAL( WHILE2( mmm,mm1,mm2,qqq, __VA_ARGS__ ) )
 
-//TODO MULTICAT using P99 later
-//#define MULTICAT(value, ...) \
-//	WHEN(NOT(IS_PAREN(value ()))) \
-//	( \
-//		OBSTRUCT(CAT(value,MULTICAT(__VA_ARGS__))) () \
-//		)
-//#define MULTICAT_INDIRECT() MULTICAT
-
 // QUOTEME(sth) => "sth"
 #define QUOTEME(sth) #sth
 

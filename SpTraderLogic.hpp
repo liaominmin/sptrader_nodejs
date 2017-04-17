@@ -695,7 +695,6 @@ void after_worker_for_call(uv_work_t * req,int status){
 		rst["rc"]=my_data->rc;
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
-		//my_data->callback.Reset();//TODO check if release?
 	}
 	delete my_data;
 }

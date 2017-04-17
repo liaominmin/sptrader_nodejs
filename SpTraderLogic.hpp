@@ -688,12 +688,14 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::HandleScope handle_scope(isolate);
 	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
-	if(!callback.IsEmpty()){
+	if(!callback.IsEmpty())
+	{
 		const unsigned argc = 1;
-		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->rst.dump().c_str()))};
+		json rst=my_data->rst;
+		rst["rc"]=my_data->rc;
+		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
-		//handle_scope.Close(v8::Undefined(isolate));//"Close" seems removed...
-		//callback.Dispose();
+		//my_data->callback.Reset();//TODO check if release?
 	}
 	delete my_data;
 }

@@ -65,18 +65,25 @@
 #define ITR1(mmm,mm1,qqq,...) EVAL( WHILE1( mmm,mm1,qqq,__VA_ARGS__) )
 #define ITR2(mmm,mm1,mm2,qqq,...) EVAL( WHILE2( mmm,mm1,mm2,qqq, __VA_ARGS__ ) )
 
-#define MCAT(value, ...) \
-	CAT(value, CAT(__VA_ARGS__))
-//#define MCAT(value, ...) \
-//	WHEN(NOT(IS_PAREN(value ()))) \
-//	( \
-//		EVAL(CAT(value, MCAT(__VA_ARGS__))) \
-//	)
-//#define KKK(value, ...) CAT(value, MCAT(__VA_ARGS__))
-
-
 // QUOTEME(sth) => "sth"
 #define QUOTEME(sth) #sth
 
 // warp XXXX as {XXXX}
 #define BRACKET_WRAP(...) {__VA_ARGS__}
+
+//TMP SOLUTION FOR MCAT()
+// Variable Argument Macro (VA_MACRO) upto 9 arguments
+#define NUM_ARGS_(_1, _2, _3, _4, _5, _6, _7, _8, _9, TOTAL, ...) TOTAL
+#define NUM_ARGS(...) NUM_ARGS_(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#define VA_MACRO(MACRO, ...) CAT(MACRO, NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#define MCAT(...) VA_MACRO(MCAT, __VA_ARGS__)
+#define MCAT1(_1) _1
+#define MCAT2(_1, _2) CAT(MCAT1(_1),_2)
+#define MCAT3(_1, _2, _3) CAT(MCAT2(_1,_2),_3)
+#define MCAT4(_1, _2, _3, _4) CAT(MCAT3(_1,_2,_3),_4)
+#define MCAT5(_1, _2, _3, _4, _5) CAT(MCAT4(_1,_2,_3,_4),_5)
+#define MCAT6(_1, _2, _3, _4, _5, _6) CAT(MCAT5(_1,_2,_3,_4,_5),_6)
+#define MCAT7(_1, _2, _3, _4, _5, _6,_7) CAT(MCAT5(_1,_2,_3,_4,_5),_6)
+#define MCAT8(_1, _2, _3, _4, _5, _6,_7,_8) CAT(MCAT5(_1,_2,_3,_4,_5,_6),_7)
+#define MCAT9(_1, _2, _3, _4, _5, _6,_7,_8,_9) CAT(MCAT5(_1,_2,_3,_4,_5,_6,_7),_8)
+

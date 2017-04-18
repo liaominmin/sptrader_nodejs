@@ -65,6 +65,16 @@
 #define ITR1(mmm,mm1,qqq,...) EVAL( WHILE1( mmm,mm1,qqq,__VA_ARGS__) )
 #define ITR2(mmm,mm1,mm2,qqq,...) EVAL( WHILE2( mmm,mm1,mm2,qqq, __VA_ARGS__ ) )
 
+#define MCAT(value, ...) \
+	CAT(value, CAT(__VA_ARGS__))
+//#define MCAT(value, ...) \
+//	WHEN(NOT(IS_PAREN(value ()))) \
+//	( \
+//		EVAL(CAT(value, MCAT(__VA_ARGS__))) \
+//	)
+//#define KKK(value, ...) CAT(value, MCAT(__VA_ARGS__))
+
+
 // QUOTEME(sth) => "sth"
 #define QUOTEME(sth) #sth
 

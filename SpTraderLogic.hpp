@@ -171,6 +171,9 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 #define COPY_TO_LNG(aaa,kkk)\
 	long kkk=0;\
 	if(aaa.is_number_integer()){ kkk=aaa; }
+#define COPY_TO_DBL(aaa,kkk)\
+	double kkk=0;\
+	if(aaa.is_number_float()){ kkk=aaa; }
 #define COPY_TO_STR(aaa,kkk)\
 	char kkk[255]={0};\
 	if(aaa.is_string()){\
@@ -473,6 +476,80 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 	COPY_TO_INT(in["host_id"],host_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
 }
+//1.9
+inline void SPAPI_AddOrder(ShareDataCall * my_data){
+	json in=my_data->in;
+	SPApiOrder ord={0};
+	COPY_TO_STRUCT(SPApiOrder,in,ord);
+	my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&ord);
+}
+//1.10
+inline void SPAPI_AddInactiveOrder(ShareDataCall * my_data){
+	json in=my_data->in;
+	SPApiOrder ord={0};
+	COPY_TO_STRUCT(SPApiOrder,in,ord);
+	my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&ord);
+}
+//1.11
+inline void SPAPI_ChangeOrder(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_DBL(in["org_price"],org_price);
+	COPY_TO_LNG(in["org_qty"],org_qty);
+	//SPApiOrder ord={0};
+	SPApiOrder order;
+	memset(&order, 0, sizeof(SPApiOrder));
+	COPY_TO_STRUCT(SPApiOrder,in,order);
+	my_data->rc = apiProxyWrapper.SPAPI_ChangeOrder(user_id,&order,org_price,org_qty);
+}
+//1.12
+inline void SPAPI_ChangeOrderBy(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	COPY_TO_LNG(in["accOrderNo"],accOrderNo);
+	COPY_TO_DBL(in["org_price"],org_price);
+	COPY_TO_LNG(in["org_qty"],org_qty);
+	COPY_TO_DBL(in["newPrice"],newPrice);
+	COPY_TO_LNG(in["newQty"],newQty);
+	my_data->rc = apiProxyWrapper.SPAPI_ChangeOrderBy(user_id,acc_no,accOrderNo,org_price,org_qty,newPrice,newQty);
+}
+//1.13
+inline void SPAPI_GetOrderByOrderNo(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	COPY_TO_LNG(in["int_order_no"],int_order_no);
+	SPApiOrder order;
+	memset(&order, 0, sizeof(SPApiOrder));
+	//COPY_TO_STRUCT(SPApiOrder,in,order);
+	my_data->rc = apiProxyWrapper.SPAPI_GetOrderByOrderNo(user_id,acc_no,int_order_no,&order);
+	json out;
+	COPY_STRUCT(SPApiOrder,order,out["order"]);
+	my_data->out=out;
+}
+//1.14
+inline void SPAPI_GetOrderCount(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_GetOrderCount(user_id,acc_no);
+}
+//1.15
+inline void SPAPI_GetActiveOrders(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	vector<SPApiOrder> apiOrderList;
+	//int SPAPI_GetActiveOrders(char *user_id, char *acc_no, vector<SPApiOrder>& apiOrderList);
+	my_data->rc = apiProxyWrapper.SPAPI_GetActiveOrders(user_id,acc_no,apiOrderList);
+	json out;
+	for (int i = 0; i < apiOrderList.size(); i++) {
+		SPApiOrder& order = apiOrderList[i];
+		COPY_STRUCT(SPApiOrder,order,out[i]);
+	}
+	my_data->out=out;
+}
 //1.17
 inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -614,21 +691,21 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//SPAPI_ChangePassword,//1.7
 				SPAPI_GetLoginStatus,//1.8
 				//下单相关：{ TODO
-				//SPAPI_AddOrder,//1.9 TODO
-				//SPAPI_AddInactiveOrder,//1.10
-				//SPAPI_ChangeOrder,//1.11
-				//SPAPI_ChangeOrderBy,//1.12
-				//SPAPI_GetOrderByOrderNo,//1.13
-				//SPAPI_GetOrderCount,//1.14
-				//SPAPI_GetActiveOrder,//1.15
-				//SPAPI_GetOrdersByArray,//1.16
+				SPAPI_AddOrder,//1.9  70%
+				SPAPI_AddInactiveOrder,//1.10  60%
+				SPAPI_ChangeOrder,//1.11 50%
+				SPAPI_ChangeOrderBy,//1.12 50%
+				SPAPI_GetOrderByOrderNo,//1.13 50%
+				SPAPI_GetOrderCount,//1.14 50%
+				SPAPI_GetActiveOrders,//1.15  50%
+				//SPAPI_GetOrdersByArray,//1.16 作用不大，先忽略.
 				SPAPI_DeleteOrderBy,//1.17
-				//SPAPI_DeleteAllOrders,//1.18
-				//SPAPI_ActivateOrderBy,//1.19
-				//SPAPI_ActivateAllOrderOrders,//1.20
-				//SPAPI_InactivateOrderBy,//1.21
-				//SPAPI_InactivateAllOrders,//1.22
-				//SPAPI_SendMarketMakingOrder,//1.23
+				//SPAPI_DeleteAllOrders,//1.18 TODO
+				//SPAPI_ActivateOrderBy,//1.19 TODO
+				//SPAPI_ActivateAllOrderOrders,//1.20 TODO
+				//SPAPI_InactivateOrderBy,//1.21 TODO
+				//SPAPI_InactivateAllOrders,//1.22 TODO
+				//SPAPI_SendMarketMakingOrder,//1.23 TODO
 				//下单相关：}
 				//持仓相关：{
 				SPAPI_GetPosCount,//1.24
@@ -651,7 +728,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_GetInstrument,//1.35 获得市场信息,Instrument其实跟市场差不多，估计用市场歧义多，所以他们用这个TERMS(Instrument)
 				//SPAPI_GetInstrumentByArray,//1.36 暂时不需要，用1.35先顶着用.
 				//SPAPI_GetInstrumentByCode,//1.37 暂时没用,后面可能需要更新单个市场信息设定时可能需要.
-				//SPAPI_GetProductCount,//1.38 TODO
+				//SPAPI_GetProductCount,//1.38 暂时没用
 				SPAPI_GetProduct,//1.39
 				//SPAPI_GetProductByArray,//1.40 暂时没用
 				SPAPI_GetProductByCode,//1.41
@@ -669,7 +746,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_LoadProductInfoListByCode,//1.51
 				//SPAPI_SetApiLogPath,//1.52 暂时没用
 				//SPAPI_GetCcyRateByCcy,//1.53 暂时没用
-				//SPAPI_AccountLogin,//1.54 该方法只针对AE,当AE登录后可选择性登录账户
+				//SPAPI_AccountLogin,//1.54 暂时没用, 该方法只针对AE,当AE登录后可选择性登录账户
 				//SPAPI_AccountLogout,//1.55 暂时没用
 				//SPAPI_SendAccControl,//1.56 暂时没用
 				))

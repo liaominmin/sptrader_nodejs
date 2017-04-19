@@ -231,7 +231,9 @@ void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
-	j["ret_msg"]=ret_msg;
+	j["ret_msg"]=ret_msg;//strange...
+	j["ret_msg"]=string(ret_msg);
+	//j["ret_msg"]=big2utf8((const char*)ret_msg);//TEST FAILED...
 	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
 }
 //2
@@ -239,7 +241,8 @@ void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
-	j["ret_msg"]=ret_msg;
+	//j["ret_msg"]=ret_msg;
+	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALLBACK_FOR_ON(ApiTickerUpdate,j);
 }
 //3
@@ -248,7 +251,8 @@ void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *or
 	json j;
 	j["action"]=action;
 	j["err_code"]=err_code;
-	j["err_msg"]=err_msg;
+	//j["err_msg"]=err_msg;
+	j["err_msg"]=string(err_msg);
 	if(NULL!=order)
 		COPY_STRUCT(SPApiOrder,(*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderRequestFailed,j);
@@ -267,7 +271,8 @@ void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_c
 {
 	json j;
 	j["err_code"]=err_code;
-	j["err_msg"]=err_msg;
+	//j["err_msg"]=err_msg;
+	j["err_msg"]=string(err_msg);
 	if(NULL!=mm_order)
 	COPY_STRUCT(SPApiMMOrder,(*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderRequestFailed,j);
@@ -285,6 +290,7 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 {
 	json j;
 	j["product_code"]=product_code;
+	//j["product_code"]=string(product_code);
 	j["buy_sell"]=buy_sell;
 	j["qty"]=qty;
 	ASYNC_CALLBACK_FOR_ON(QuoteRequestReceived,j);
@@ -337,7 +343,8 @@ void SpTraderLogic::OnInstrumentListReply(bool is_ready, char *ret_msg)
 	printf("\nInstrument Ready:%s. Ret Msg:%s\n",is_ready?"Ok":"No", ret_msg);
 	json j;
 	j["is_ready"]=is_ready;
-	j["ret_msg"]=ret_msg;
+	//j["ret_msg"]=ret_msg;
+	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALLBACK_FOR_ON(InstrumentListReply,j);
 }
 //14
@@ -360,6 +367,7 @@ void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_ms
 {
 	json j;
 	j["accNo"]=accNo;
+	//j["accNo"]=string(accNo);
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=ret_msg;
 	ASYNC_CALLBACK_FOR_ON(AccountLoginReply,j);
@@ -409,7 +417,9 @@ void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, cha
 {
 	json j;
 	j["inst_code"]=inst_code;
-	j["ret_msg"]=ret_msg;
+	//j["inst_code"]=string(inst_code);
+	//j["ret_msg"]=ret_msg;
+	j["ret_msg"]=string(ret_msg);
 	j["is_ready"]=is_ready;
 	ASYNC_CALLBACK_FOR_ON(ProductListByCodeReply,j);
 }
@@ -418,6 +428,7 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
+	//j["ret_msg"]=ret_msg;
 	j["ret_msg"]=string(ret_msg);
 	ASYNC_CALLBACK_FOR_ON(AccountControlReply,j);
 }

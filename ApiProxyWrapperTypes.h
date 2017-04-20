@@ -1,5 +1,6 @@
 #ifndef ApiProxyWrapperTypeH
 #define ApiProxyWrapperTypeH
+
 //---------------------------------------------------------------------------
 //#include "SPApiProxyDataType.h"
 //#include "ApiProxyWrapperReply.h"
@@ -217,42 +218,61 @@
 #define COPY_STRUCT(structName,$src,$tgt) MCAT(COPY_,structName,_FIELDS)($src,$tgt)
 
 #define COPY_TO_SPApiOrder_FIELDS(sss,ttt) \
-			ttt.Price=sss["Price"];\
-			ttt.StopLevel=sss["StopLevel"];\
-			ttt.UpLevel=sss["UpLevel"];\
-			ttt.UpPrice=sss["UpPrice"];\
-			ttt.DownLevel=sss["DownLevel"];\
-			ttt.DownPrice=sss["DownPrice"];\
-			ttt.ExtOrderNo=sss["ExtOrderNo"];\
-			ttt.IntOrderNo=sss["IntOrderNo"];\
-			ttt.Qty=sss["Qty"];\
-			ttt.TradedQty=sss["TradedQty"];\
-			ttt.TotalQty=sss["TotalQty"];\
-			ttt.ValidTime=sss["ValidTime"];\
-			ttt.SchedTime=sss["SchedTime"];\
-			ttt.TimeStamp=sss["TimeStamp"];\
-			ttt.OrderOptions=sss["OrderOptions"];\
-			strcpy(ttt.AccNo,sss["AccNo"].get<std::string>().c_str());\
-			strcpy(ttt.ProdCode,sss["ProdCode"].get<std::string>().c_str());\
-			strcpy(ttt.Initiator,sss["Initiator"].get<string>().c_str());\
-			strcpy(ttt.Ref,sss["Ref"].get<string>().c_str());\
-			strcpy(ttt.Ref2,sss["Ref2"].get<string>().c_str());\
-			strcpy(ttt.GatewayCode,sss["GatewayCode"].get<string>().c_str());\
-			strcpy(ttt.ClOrderId,sss["ClOrderId"].get<string>().c_str());\
-			ttt.BuySell=sss["BuySell"].get<char>();\
-			ttt.StopType=sss["StopType"].get<char>();\
-			ttt.OpenClose=sss["OpenClose"].get<char>();\
-			ttt.CondType=sss["CondType"].get<char>();\
-			ttt.OrderType=sss["OrderType"].get<char>();\
-			ttt.ValidType=sss["ValidType"].get<char>();\
-			ttt.Status=sss["Status"].get<char>();\
-			ttt.DecInPrice=sss["DecInPrice"].get<char>();\
-			ttt.OrderAction=sss["OrderAction"].get<char>();\
-			ttt.UpdateTime=sss["UpdateTime"].get<int>();\
-			ttt.UpdateSeqNo=sss["UpdateSeqNo"].get<int>();
+	ttt.Price=sss["Price"];\
+	ttt.StopLevel=sss["StopLevel"];\
+	ttt.UpLevel=sss["UpLevel"];\
+	ttt.UpPrice=sss["UpPrice"];\
+	ttt.DownLevel=sss["DownLevel"];\
+	ttt.DownPrice=sss["DownPrice"];\
+	ttt.ExtOrderNo=sss["ExtOrderNo"];\
+	ttt.IntOrderNo=sss["IntOrderNo"];\
+	ttt.Qty=sss["Qty"];\
+	ttt.TradedQty=sss["TradedQty"];\
+	ttt.TotalQty=sss["TotalQty"];\
+	ttt.ValidTime=sss["ValidTime"];\
+	ttt.SchedTime=sss["SchedTime"];\
+	ttt.TimeStamp=sss["TimeStamp"];\
+	ttt.OrderOptions=sss["OrderOptions"];\
+	strcpy(ttt.AccNo,sss["AccNo"].get<string>().c_str());\
+	strcpy(ttt.ProdCode,sss["ProdCode"].get<string>().c_str());\
+	strcpy(ttt.Initiator,sss["Initiator"].get<string>().c_str());\
+	strcpy(ttt.Ref,sss["Ref"].get<string>().c_str());\
+	strcpy(ttt.Ref2,sss["Ref2"].get<string>().c_str());\
+	strcpy(ttt.GatewayCode,sss["GatewayCode"].get<string>().c_str());\
+	strcpy(ttt.ClOrderId,sss["ClOrderId"].get<string>().c_str());\
+	ttt.BuySell=sss["BuySell"].get<char>();\
+	ttt.StopType=sss["StopType"].get<char>();\
+	ttt.OpenClose=sss["OpenClose"].get<char>();\
+	ttt.CondType=sss["CondType"].get<char>();\
+	ttt.OrderType=sss["OrderType"].get<char>();\
+	ttt.ValidType=sss["ValidType"].get<char>();\
+	ttt.Status=sss["Status"].get<char>();\
+	ttt.DecInPrice=sss["DecInPrice"].get<char>();\
+	ttt.OrderAction=sss["OrderAction"].get<char>();\
+	ttt.UpdateTime=sss["UpdateTime"].get<int>();\
+	ttt.UpdateSeqNo=sss["UpdateSeqNo"].get<int>();
 
-#define COPY_TO_STRUCT(structName,$src,$tgt) MCAT(COPY_TO_,structName,_FIELDS)($src,$tgt)
+#define COPY_TO_SPApiMMOrder_FIELDS(sss,ttt) \
+	ttt.BidExtOrderNo=sss["BidExtOrderNo"];\
+	ttt.AskExtOrderNo=sss["AskExtOrderNo"];\
+	ttt.BidAccOrderNo=sss["BidAccOrderNo"];\
+	ttt.AskAccOrderNo=sss["AskAccOrderNo"];\
+	ttt.BidPrice=sss["BidPrice"];\
+	ttt.AskPrice=sss["AskPrice"];\
+	ttt.BidQty=sss["BidQty"];\
+	ttt.AskQty=sss["AskQty"];\
+	ttt.SpecTime=sss["SpecTime"];\
+	ttt.OrderOptions=sss["OrderOptions"];\
+	strcpy(ttt.ProdCode,sss["ProdCode"].get<string>().c_str());\
+	strcpy(ttt.AccNo,sss["AccNo"].get<string>().c_str());\
+	strcpy(ttt.ClOrderId,sss["ClOrderId"].get<string>().c_str());\
+	ttt.OrderType=sss["OrderType"].get<char>();\
+	ttt.ValidType=sss["ValidType"].get<char>();\
+	ttt.DecInPrice=sss["DecInPrice"].get<char>();
+
+#define COPY_TO_STRUCT($structName,$src,$tgt) \
+	$structName $tgt;\
+	MCAT(COPY_TO_,$structName,_FIELDS)($src,$tgt)
 
 //---------------------------------------------------------------------------
 #endif
-

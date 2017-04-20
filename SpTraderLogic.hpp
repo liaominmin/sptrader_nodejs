@@ -479,14 +479,12 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 //1.9
 inline void SPAPI_AddOrder(ShareDataCall * my_data){
 	json in=my_data->in;
-	SPApiOrder ord={0};
 	COPY_TO_STRUCT(SPApiOrder,in,ord);
 	my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&ord);
 }
 //1.10
 inline void SPAPI_AddInactiveOrder(ShareDataCall * my_data){
 	json in=my_data->in;
-	SPApiOrder ord={0};
 	COPY_TO_STRUCT(SPApiOrder,in,ord);
 	my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&ord);
 }
@@ -496,9 +494,6 @@ inline void SPAPI_ChangeOrder(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_DBL(in["org_price"],org_price);
 	COPY_TO_LNG(in["org_qty"],org_qty);
-	//SPApiOrder ord={0};
-	SPApiOrder order;
-	memset(&order, 0, sizeof(SPApiOrder));
 	COPY_TO_STRUCT(SPApiOrder,in,order);
 	my_data->rc = apiProxyWrapper.SPAPI_ChangeOrder(user_id,&order,org_price,org_qty);
 }
@@ -520,9 +515,7 @@ inline void SPAPI_GetOrderByOrderNo(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	COPY_TO_LNG(in["int_order_no"],int_order_no);
-	SPApiOrder order;
-	memset(&order, 0, sizeof(SPApiOrder));
-	//COPY_TO_STRUCT(SPApiOrder,in,order);
+	SPApiOrder order={0};//memset(&order, 0, sizeof(SPApiOrder));
 	my_data->rc = apiProxyWrapper.SPAPI_GetOrderByOrderNo(user_id,acc_no,int_order_no,&order);
 	json out;
 	COPY_STRUCT(SPApiOrder,order,out["order"]);
@@ -550,6 +543,25 @@ inline void SPAPI_GetActiveOrders(ShareDataCall * my_data){
 	}
 	my_data->out=out;
 }
+//1.16
+//Just Example which don't use!
+//仅留作测试，因为比Vector麻烦，尽量不要使用所有 "ByArray" 型的函数.
+inline void SPAPI_GetOrdersByArray(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	json out;
+	int count =  apiProxyWrapper.SPAPI_GetOrderCount(user_id,acc_no);
+	SPApiOrder * apiOrderList = (SPApiOrder *)malloc(count * sizeof(apiOrderList));
+	//int SPAPI_GetOrdersByArray(char *user_id, char *acc_no,SPApiOrder* apiOrderList)
+	my_data->rc = apiProxyWrapper.SPAPI_GetOrdersByArray(user_id,acc_no,apiOrderList);
+	for (int i = 0; i < count; i++) {
+		SPApiOrder& order = apiOrderList[i];
+		COPY_STRUCT(SPApiOrder,order,out[i]);
+	}
+	free(apiOrderList);
+	my_data->out=out;
+}
 //1.17
 inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -559,6 +571,55 @@ inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
 	COPY_TO_STR(in["productCode"],productCode);
 	COPY_TO_STR(in["clOrderId"],clOrderId);
 	my_data->rc = apiProxyWrapper.SPAPI_DeleteOrderBy(user_id,acc_no,accOrderNo,productCode,clOrderId);
+}
+//1.18
+inline void SPAPI_DeleteAllOrders(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_DeleteAllOrders(user_id,acc_no);
+}
+//1.19
+inline void SPAPI_ActivateOrderBy(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	COPY_TO_LNG(in["accOrderNo"],accOrderNo);
+	my_data->rc = apiProxyWrapper.SPAPI_ActivateOrderBy(user_id,acc_no,accOrderNo);
+}
+//1.20
+inline void SPAPI_ActivateAllOrders(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_ActivateAllOrders(user_id,acc_no);
+}
+//1.21
+inline void SPAPI_InactivateOrderBy(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	COPY_TO_LNG(in["accOrderNo"],accOrderNo);
+	my_data->rc = apiProxyWrapper.SPAPI_InactivateOrderBy(user_id,acc_no,accOrderNo);
+}
+//1.22
+inline void SPAPI_InactivateAllOrders(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_InactivateAllOrders(user_id,acc_no);
+}
+//1.23
+//注：
+//(AskAccOrderNo且AskExtOrderNo) 或 (BidAccOrderNo且 BidAccOrderNo)
+//1：如果填上工作中订单相对应编号将修改前订单。
+//2：填0表示下新单。
+//3：如果填上工作中订单相对应编号，且Qty=0 就是删除此订单。
+inline void SPAPI_SendMarketMakingOrder(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STRUCT(SPApiMMOrder,in,mmorder);
+	my_data->rc = apiProxyWrapper.SPAPI_SendMarketMakingOrder(user_id,&mmorder);
 }
 //1.24
 inline void SPAPI_GetPosCount(ShareDataCall * my_data){
@@ -690,22 +751,22 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_Logout,//1.6
 				//SPAPI_ChangePassword,//1.7
 				SPAPI_GetLoginStatus,//1.8
-				//下单相关：{ TODO
-				SPAPI_AddOrder,//1.9  70%
-				SPAPI_AddInactiveOrder,//1.10  60%
-				SPAPI_ChangeOrder,//1.11 50%
-				SPAPI_ChangeOrderBy,//1.12 50%
-				SPAPI_GetOrderByOrderNo,//1.13 50%
-				SPAPI_GetOrderCount,//1.14 50%
-				SPAPI_GetActiveOrders,//1.15  50%
-				//SPAPI_GetOrdersByArray,//1.16 作用不大，先忽略.
+				//下单相关：{
+				SPAPI_AddOrder,//1.9
+				SPAPI_AddInactiveOrder,//1.10
+				SPAPI_ChangeOrder,//1.11
+				SPAPI_ChangeOrderBy,//1.12
+				SPAPI_GetOrderByOrderNo,//1.13
+				SPAPI_GetOrderCount,//1.14 use with SPAPI_GetOrdersByArray
+				SPAPI_GetActiveOrders,//1.15
+				SPAPI_GetOrdersByArray,//1.16 作用不大，仅做为ByArray类的用法的e.g.算了...
 				SPAPI_DeleteOrderBy,//1.17
-				//SPAPI_DeleteAllOrders,//1.18 TODO
-				//SPAPI_ActivateOrderBy,//1.19 TODO
-				//SPAPI_ActivateAllOrderOrders,//1.20 TODO
-				//SPAPI_InactivateOrderBy,//1.21 TODO
-				//SPAPI_InactivateAllOrders,//1.22 TODO
-				//SPAPI_SendMarketMakingOrder,//1.23 TODO
+				SPAPI_DeleteAllOrders,//1.18 
+				SPAPI_ActivateOrderBy,//1.19
+				SPAPI_ActivateAllOrders,//1.20 
+				SPAPI_InactivateOrderBy,//1.21 
+				SPAPI_InactivateAllOrders,//1.22
+				SPAPI_SendMarketMakingOrder,//1.23
 				//下单相关：}
 				//持仓相关：{
 				SPAPI_GetPosCount,//1.24

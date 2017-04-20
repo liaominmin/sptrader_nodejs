@@ -981,10 +981,8 @@ void worker_for_call(uv_work_t * req){
 	if(NULL!=fcnPtr){
 		fcnPtr(my_data);
 	}else{
-		json out;
-		out["STS"]="KO";
-		out["errmsg"]="not found to call:"+api;
-		my_data->out=out;
+		rst["STS"]="KO";
+		rst["errmsg"]="not found api:"+api;
 	}
 	rst["out"]=my_data->out;
 	my_data->rst=rst;

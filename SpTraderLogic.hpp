@@ -256,8 +256,7 @@ void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *or
 	j["err_code"]=err_code;
 	//j["err_msg"]=err_msg;
 	j["err_msg"]=string(err_msg);
-	if(NULL!=order)
-		COPY_STRUCT(SPApiOrder,(*order),j["order"]);
+	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderRequestFailed,j);
 }
 //4
@@ -265,8 +264,7 @@ void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=0;
-	if(NULL!=order)
-	COPY_STRUCT(SPApiOrder,(*order),j["order"]);
+	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
 	ASYNC_CALLBACK_FOR_ON(OrderBeforeSendReport,j);
 }
 //5 SPAPI_RegisterMMOrderRequestFailed
@@ -276,16 +274,14 @@ void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_c
 	j["err_code"]=err_code;
 	//j["err_msg"]=err_msg;
 	j["err_msg"]=string(err_msg);
-	if(NULL!=mm_order)
-	COPY_STRUCT(SPApiMMOrder,(*mm_order),j["mm_order"]);
+	if(NULL!=mm_order) COPY_TO_JSON(SPApiMMOrder,(*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderRequestFailed,j);
 }
 //6
 void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 {
 	json j;
-	if(NULL!=mm_order)
-	COPY_STRUCT(SPApiMMOrder,(*mm_order),j["mm_order"]);
+	if(NULL!=mm_order) COPY_TO_JSON(SPApiMMOrder,(*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderBeforeSendReport,j);
 }
 //7.SPAPI_RegisterQuoteRequestReceivedReport
@@ -302,32 +298,28 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 {
 	json j;
-	if(NULL!=trade)
-	COPY_STRUCT(SPApiTrade,(*trade),j["trade"]);
+	if(NULL!=trade) COPY_TO_JSON(SPApiTrade,(*trade),j["trade"]);
 	ASYNC_CALLBACK_FOR_ON(TradeReport,j);
 }
 //9
 void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
 {
 	json j;
-	if(NULL!=trade)
-	COPY_STRUCT(SPApiTrade,(*trade),j["trade"]);
+	if(NULL!=trade) COPY_TO_JSON(SPApiTrade,(*trade),j["trade"]);
 	ASYNC_CALLBACK_FOR_ON(LoadTradeReadyPush,j);
 }
 //10
 void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
-	if(NULL!=price)
-	COPY_STRUCT(SPApiPrice,(*price),j["price"]);
+	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
 	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
 }
 //11
 void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
 {
 	json j;
-	if(NULL!=ticker)
-	COPY_STRUCT(SPApiTicker,(*ticker),j["ticker"]);
+	if(NULL!=ticker) COPY_TO_JSON(SPApiTicker,(*ticker),j["ticker"]);
 	ASYNC_CALLBACK_FOR_ON(TickerUpdate,j);
 }
 //12
@@ -335,8 +327,7 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=rec_no;
-	if(NULL!=order)
-	COPY_STRUCT(SPApiOrder,(*order),j["order"]);
+	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
 
 	ASYNC_CALLBACK_FOR_ON(OrderReport,j);
 }
@@ -387,32 +378,28 @@ void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
 void SpTraderLogic::OnAccountInfoPush(const SPApiAccInfo *acc_info)
 {
 	json j;
-	if(NULL!=acc_info)
-	COPY_STRUCT(SPApiAccInfo,(*acc_info),j["acc_info"]);
+	if(NULL!=acc_info) COPY_TO_JSON(SPApiAccInfo,(*acc_info),j["acc_info"]);
 	ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
 }
 //19
 void SpTraderLogic::OnAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
-	if(NULL!=pos)
-	COPY_STRUCT(SPApiPos,(*pos),j["pos"]);
+	if(NULL!=pos) COPY_TO_JSON(SPApiPos,(*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(AccountPositionPush,j);
 }
 //20
 void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
-	if(NULL!=pos)
-	COPY_STRUCT(SPApiPos,(*pos),j["pos"]);
+	if(NULL!=pos) COPY_TO_JSON(SPApiPos,(*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountPositionPush,j);
 }
 //21
 void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 {
 	json j;
-	if(NULL!=acc_bal)
-	COPY_STRUCT(SPApiAccBal,(*acc_bal),j["acc_bal"]);
+	if(NULL!=acc_bal) COPY_TO_JSON(SPApiAccBal,(*acc_bal),j["acc_bal"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
 }
 //22
@@ -447,6 +434,13 @@ struct ShareDataCall
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
+//1.3
+inline void SPAPI_SetLanguageId(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_INT(in["langid"],langid);
+	apiProxyWrapper.SPAPI_SetLanguageId(langid);
+	my_data->rc =0;
+}
 //1.4
 inline void SPAPI_SetLoginInfo(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -468,6 +462,14 @@ inline void SPAPI_Logout(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_Logout(user_id);
+}
+//1.7
+inline void SPAPI_ChangePassword(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["old_psw"],old_psw);
+	COPY_TO_STR(in["new_psw"],new_psw);
+	my_data->rc = apiProxyWrapper.SPAPI_ChangePassword(user_id,old_psw,new_psw);
 }
 //1.8
 inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
@@ -518,7 +520,7 @@ inline void SPAPI_GetOrderByOrderNo(ShareDataCall * my_data){
 	SPApiOrder order={0};//memset(&order, 0, sizeof(SPApiOrder));
 	my_data->rc = apiProxyWrapper.SPAPI_GetOrderByOrderNo(user_id,acc_no,int_order_no,&order);
 	json out;
-	COPY_STRUCT(SPApiOrder,order,out["order"]);
+	COPY_TO_JSON(SPApiOrder,order,out);
 	my_data->out=out;
 }
 //1.14
@@ -539,7 +541,7 @@ inline void SPAPI_GetActiveOrders(ShareDataCall * my_data){
 	json out;
 	for (int i = 0; i < apiOrderList.size(); i++) {
 		SPApiOrder& order = apiOrderList[i];
-		COPY_STRUCT(SPApiOrder,order,out[i]);
+		COPY_TO_JSON(SPApiOrder,order,out[i]);
 	}
 	my_data->out=out;
 }
@@ -557,7 +559,7 @@ inline void SPAPI_GetOrdersByArray(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetOrdersByArray(user_id,acc_no,apiOrderList);
 	for (int i = 0; i < count; i++) {
 		SPApiOrder& order = apiOrderList[i];
-		COPY_STRUCT(SPApiOrder,order,out[i]);
+		COPY_TO_JSON(SPApiOrder,order,out[i]);
 	}
 	free(apiOrderList);
 	my_data->out=out;
@@ -627,6 +629,31 @@ inline void SPAPI_GetPosCount(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetPosCount(user_id);
 }
+//1.25
+inline void SPAPI_GetAllPos(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	vector<SPApiPos> apiPosList;
+	my_data->rc = apiProxyWrapper.SPAPI_GetAllPos(user_id,apiPosList);
+	json out;
+	int apiPosList_size=apiPosList.size();
+	for (int i = 0; i < apiPosList_size; i++) {
+		SPApiPos& pos = apiPosList[i];
+		COPY_TO_JSON(SPApiPos,pos,out[i]);
+	}
+	my_data->out=out;
+}
+//1.27
+inline void SPAPI_GetPosByProduct(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["prod_code"],prod_code);
+	SPApiPos pos={0};//memset(&order, 0, sizeof(SPApiOrder));
+	my_data->rc = apiProxyWrapper.SPAPI_GetPosByProduct(user_id,prod_code,&pos);
+	json out;
+	COPY_TO_JSON(SPApiPos,pos,out);
+	my_data->out=out;
+}
 //1.31
 inline void SPAPI_SubscribePrice(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -643,7 +670,7 @@ inline void SPAPI_GetPriceByCode(ShareDataCall * my_data){
 	SPApiPrice price={0};//memset(&price, 0, sizeof(SPApiPrice));
 	my_data->rc = apiProxyWrapper.SPAPI_GetPriceByCode(user_id,prod_code,&price);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 	json out;
-	COPY_STRUCT(SPApiPrice,price,out["price"]);
+	COPY_TO_JSON(SPApiPrice,price,out);
 	my_data->out=out;
 }
 //1.33
@@ -662,7 +689,7 @@ inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	json out;
 	for (int i = 0; i < apiInstList.size(); i++) {
 		SPApiInstrument& inst = apiInstList[i];
-		COPY_STRUCT(SPApiInstrument,inst,out[i]);
+		COPY_TO_JSON(SPApiInstrument,inst,out[i]);
 	}
 	my_data->out=out;
 }
@@ -675,7 +702,7 @@ inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json out;
 	for (int i = 0; i < apiProdList.size(); i++) {
 		SPApiProduct& prod = apiProdList[i];
-		COPY_STRUCT(SPApiProduct,prod,out[i]);
+		COPY_TO_JSON(SPApiProduct,prod,out[i]);
 	}
 	my_data->out=out;
 }
@@ -685,9 +712,11 @@ inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 	COPY_TO_STR(in["prod_code"],prod_code);
 	SPApiProduct prod={0};//memset(&prod, 0, sizeof(SPApiProduct));
 	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
-	json out;
-	COPY_STRUCT(SPApiProduct,prod,out);
-	my_data->out=out;
+	if (my_data->rc == 0){
+		json out;
+		COPY_TO_JSON(SPApiProduct,prod,out);
+		my_data->out=out;
+	}
 }
 //1.42
 inline void SPAPI_GetAccBalCount(ShareDataCall * my_data){
@@ -700,24 +729,28 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	vector<SPApiAccBal> apiAccBalList;
-	my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
-	json out;
-	for (int i = 0; i < apiAccBalList.size(); i++) {
-		SPApiAccBal& val = apiAccBalList[i];
-		COPY_STRUCT(SPApiAccBal,val,out[i]);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
+	if (rc == 0){
+		int apiAccBalList_size = apiAccBalList.size();
+		if(apiAccBalList_size>0){
+			json out;
+			for (int i = 0; i < apiAccBalList_size; i++) {
+				SPApiAccBal& val = apiAccBalList[i];
+				COPY_TO_JSON(SPApiAccBal,val,out[i]);
+			}
+			my_data->out=out;
+		}
 	}
-	my_data->out=out;
 }
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	SPApiAccInfo acc_info={0};//memset(&acc_info, 0, sizeof(SPApiAccInfo));
-	int rc;
-	my_data->rc = rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
+	int rc= my_data->rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
 	if (rc == 0){
 		json out;
-		COPY_STRUCT(SPApiAccInfo,acc_info,out["acc_info"]);
+		COPY_TO_JSON(SPApiAccInfo,acc_info,out);
 		my_data->out=out;
 	}
 }
@@ -745,11 +778,11 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 	ITR(DFN_FNC_PTR,EXPAND( //API 20161216:
 				//SPAPI_Initialize,//1.1
 				//SPAPI_Uninitialize,//1.2
-				//SPAPI_SetLanguageId,//1.3
+				SPAPI_SetLanguageId,//1.3
 				SPAPI_SetLoginInfo,//1.4
 				SPAPI_Login,//1.5
 				SPAPI_Logout,//1.6
-				//SPAPI_ChangePassword,//1.7
+				SPAPI_ChangePassword,//1.7
 				SPAPI_GetLoginStatus,//1.8
 				//下单相关：{
 				SPAPI_AddOrder,//1.9
@@ -769,15 +802,15 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_SendMarketMakingOrder,//1.23
 				//下单相关：}
 				//持仓相关：{
-				SPAPI_GetPosCount,//1.24
-				//SPAPI_GetAllPos,//1.25 TODO
-				//SPAPI_GetAllPosByArray,//1.26 TODO
-				//SPAPI_GetPosByProduct,//1.27 TODO
+				SPAPI_GetPosCount,//1.24 use with SPAPI_GetAllPosByArray
+				SPAPI_GetAllPos,//1.25
+				//SPAPI_GetAllPosByArray,//1.26 暂时没用
+				SPAPI_GetPosByProduct,//1.27 TODO
 				//持仓相关：}
 				//成交相关：{
 				//SPAPI_GetTradeCount,//1.28 TODO
 				//SPAPI_GetAllTrades,//1.29 TODO
-				//SPAPI_GetAllTradeByArray,//1.30 TODO
+				//SPAPI_GetAllTradeByArray,//1.30 暂时没用
 				//成交相关：}
 				//行情相关：{
 				SPAPI_SubscribePrice,//1.31

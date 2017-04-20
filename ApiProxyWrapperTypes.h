@@ -72,7 +72,7 @@
 			DecInPrice,\
 			Timestamp,\
 			))
-//wjc:官方可能未同步:
+//wjc:以下官方可能未同步到linux版:
 //ExStateNo,\
 //TradeStateNo,\
 //Suspend,\
@@ -105,7 +105,7 @@
 			TradedQty,\
 			AvgTradedPrice,\
 			));
-//wjc:AvgPrice,
+//wjc:AvgPrice
 #define COPY_SPApiMMOrder_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
 			BidExtOrderNo,\
 			AskExtOrderNo,\
@@ -124,7 +124,7 @@
 			ValidType,\
 			DecInPrice,\
 			));
-//wjc:OrigClOrderId,//旧用户自定义参考,win's spapidll.h也没有哦.
+//wjc:OrigClOrderId,//旧用户自定义参考,但是win's spapidll.h也没有哦.
 #define COPY_SPApiAccInfo_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
 			NAV,\
 			BuyingPower,\
@@ -213,9 +213,9 @@
 			UpdateSeqNo\
 			))
 
-//#define COPY_STRUCT(structName,$src,$tgt) EVAL(CAT(CAT(COPY_,structName),_FIELDS)($src,$tgt))
-//#define COPY_STRUCT(structName,$src,$tgt) EVAL(MCAT(COPY_,structName,_FIELDS))($src,$tgt)
-#define COPY_STRUCT(structName,$src,$tgt) MCAT(COPY_,structName,_FIELDS)($src,$tgt)
+//#define COPY_TO_JSON(structName,$src,$tgt) EVAL(CAT(CAT(COPY_,structName),_FIELDS)($src,$tgt))
+//#define COPY_TO_JSON(structName,$src,$tgt) EVAL(MCAT(COPY_,structName,_FIELDS))($src,$tgt)
+#define COPY_TO_JSON(structName,$src,$tgt) MCAT(COPY_,structName,_FIELDS)($src,$tgt)
 
 #define COPY_TO_SPApiOrder_FIELDS(sss,ttt) \
 	ttt.Price=sss["Price"];\

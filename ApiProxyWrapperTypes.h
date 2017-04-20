@@ -217,6 +217,35 @@
 //#define COPY_TO_JSON(structName,$src,$tgt) EVAL(MCAT(COPY_,structName,_FIELDS))($src,$tgt)
 #define COPY_TO_JSON(structName,$src,$tgt) MCAT(COPY_,structName,_FIELDS)($src,$tgt)
 
+/*
+#define COPY_TO_SPApiTrade_FIELDS(sss,ttt) \
+	ttt.RecNo=sss["RecNo"];\
+	ttt.Price=sss["Price"];\
+	ttt.TradeNo=sss["TradeNo"];\
+	ttt.ExtOrderNo=sss["ExtOrderNo"];\
+	ttt.IntOrderNo=sss["IntOrderNo"];\
+	ttt.Qty=sss["Qty"];\
+	ttt.TradeDate=sss["TradeDate"];\
+	ttt.TradeTime=sss["TradeTime"];\
+	ttt.AccNo=sss["AccNo"];\
+	ttt.ProdCode=sss["ProdCode"];\
+	ttt.Initiator=sss["Initiator"];\
+	ttt.Ref=sss["Ref"];\
+	ttt.Ref2=sss["Ref2"];\
+	ttt.GatewayCode=sss["GatewayCode"];\
+	ttt.ClOrderId=sss["ClOrderId"];\
+	ttt.BuySell=sss["BuySell"];\
+	ttt.OpenClose=sss["OpenClose"];\
+	ttt.Status=sss["Status"];\
+	ttt.DecInPrice=sss["DecInPrice"];\
+	ttt.OrderPrice=sss["OrderPrice"];\
+	ttt.TradeRef=sss["TradeRef"];\
+	ttt.TotalQty=sss["TotalQty"];\
+	ttt.RemainingQty=sss["RemainingQty"];\
+	ttt.TradedQty=sss["TradedQty"];\
+	ttt.AvgTradedPrice=sss["AvgTradedPrice"];
+	*/
+
 #define COPY_TO_SPApiOrder_FIELDS(sss,ttt) \
 	ttt.Price=sss["Price"];\
 	ttt.StopLevel=sss["StopLevel"];\
@@ -273,6 +302,15 @@
 #define COPY_TO_STRUCT($structName,$src,$tgt) \
 	$structName $tgt;\
 	MCAT(COPY_TO_,$structName,_FIELDS)($src,$tgt)
+
+#define COPY_VECTOR_TO_JSON($structName,$src,$tgt)\
+	int $src##_size=$src.size();\
+	if($src##_size>0){\
+		for (int i = 0; i < $src##_size; i++) {\
+			$structName& tmp##$structName = $src[i];\
+			COPY_TO_JSON($structName,tmp##$structName,$tgt[i]);\
+		}\
+	}\
 
 //---------------------------------------------------------------------------
 #endif

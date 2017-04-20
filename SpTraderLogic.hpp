@@ -517,11 +517,13 @@ inline void SPAPI_GetOrderByOrderNo(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	COPY_TO_LNG(in["int_order_no"],int_order_no);
-	SPApiOrder order={0};//memset(&order, 0, sizeof(SPApiOrder));
-	my_data->rc = apiProxyWrapper.SPAPI_GetOrderByOrderNo(user_id,acc_no,int_order_no,&order);
-	json out;
-	COPY_TO_JSON(SPApiOrder,order,out);
-	my_data->out=out;
+	SPApiOrder order={0};
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetOrderByOrderNo(user_id,acc_no,int_order_no,&order);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiOrder,order,out);
+		my_data->out=out;
+	}
 }
 //1.14
 inline void SPAPI_GetOrderCount(ShareDataCall * my_data){
@@ -537,33 +539,36 @@ inline void SPAPI_GetActiveOrders(ShareDataCall * my_data){
 	COPY_TO_STR(in["acc_no"],acc_no);
 	vector<SPApiOrder> apiOrderList;
 	//int SPAPI_GetActiveOrders(char *user_id, char *acc_no, vector<SPApiOrder>& apiOrderList);
-	my_data->rc = apiProxyWrapper.SPAPI_GetActiveOrders(user_id,acc_no,apiOrderList);
-	json out;
-	for (int i = 0; i < apiOrderList.size(); i++) {
-		SPApiOrder& order = apiOrderList[i];
-		COPY_TO_JSON(SPApiOrder,order,out[i]);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetActiveOrders(user_id,acc_no,apiOrderList);
+	if(rc==0){
+		json out;
+		COPY_VECTOR_TO_JSON(SPApiOrder,apiOrderList,out);
+		if(apiOrderList_size>0){
+			my_data->out=out;
+		}
 	}
-	my_data->out=out;
 }
 //1.16
 //Just Example which don't use!
-//仅留作测试，因为比Vector麻烦，尽量不要使用所有 "ByArray" 型的函数.
-inline void SPAPI_GetOrdersByArray(ShareDataCall * my_data){
-	json in=my_data->in;
-	COPY_TO_STR(in["user_id"],user_id);
-	COPY_TO_STR(in["acc_no"],acc_no);
-	json out;
-	int count =  apiProxyWrapper.SPAPI_GetOrderCount(user_id,acc_no);
-	SPApiOrder * apiOrderList = (SPApiOrder *)malloc(count * sizeof(apiOrderList));
-	//int SPAPI_GetOrdersByArray(char *user_id, char *acc_no,SPApiOrder* apiOrderList)
-	my_data->rc = apiProxyWrapper.SPAPI_GetOrdersByArray(user_id,acc_no,apiOrderList);
-	for (int i = 0; i < count; i++) {
-		SPApiOrder& order = apiOrderList[i];
-		COPY_TO_JSON(SPApiOrder,order,out[i]);
-	}
-	free(apiOrderList);
-	my_data->out=out;
-}
+//仅留作当例子，因为比Vector麻烦，尽量不要使用所有 "ByArray" 型的函数.
+//inline void SPAPI_GetOrdersByArray(ShareDataCall * my_data){
+//	json in=my_data->in;
+//	COPY_TO_STR(in["user_id"],user_id);
+//	COPY_TO_STR(in["acc_no"],acc_no);
+//	int count =  apiProxyWrapper.SPAPI_GetOrderCount(user_id,acc_no);
+//	SPApiOrder * apiOrderList = (SPApiOrder *)malloc(count * sizeof(apiOrderList));
+//	//int SPAPI_GetOrdersByArray(char *user_id, char *acc_no,SPApiOrder* apiOrderList)
+//	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetOrdersByArray(user_id,acc_no,apiOrderList);
+//	if(rc==0){
+//		json out;
+//		for (int i = 0; i < count; i++) {
+//			SPApiOrder& order = apiOrderList[i];
+//			COPY_TO_JSON(SPApiOrder,order,out[i]);
+//		}
+//		free(apiOrderList);
+//		my_data->out=out;
+//	}
+//}
 //1.17
 inline void SPAPI_DeleteOrderBy(ShareDataCall * my_data){
 	json in=my_data->in;
@@ -634,25 +639,49 @@ inline void SPAPI_GetAllPos(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	vector<SPApiPos> apiPosList;
-	my_data->rc = apiProxyWrapper.SPAPI_GetAllPos(user_id,apiPosList);
-	json out;
-	int apiPosList_size=apiPosList.size();
-	for (int i = 0; i < apiPosList_size; i++) {
-		SPApiPos& pos = apiPosList[i];
-		COPY_TO_JSON(SPApiPos,pos,out[i]);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetAllPos(user_id,apiPosList);
+	if(rc==0){
+		json out;
+		COPY_VECTOR_TO_JSON(SPApiPos,apiPosList,out);
+		if(apiPosList_size>0){
+			my_data->out=out;
+		}
 	}
-	my_data->out=out;
 }
 //1.27
 inline void SPAPI_GetPosByProduct(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
-	SPApiPos pos={0};//memset(&order, 0, sizeof(SPApiOrder));
-	my_data->rc = apiProxyWrapper.SPAPI_GetPosByProduct(user_id,prod_code,&pos);
-	json out;
-	COPY_TO_JSON(SPApiPos,pos,out);
-	my_data->out=out;
+	SPApiPos pos={0};
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetPosByProduct(user_id,prod_code,&pos);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiPos,pos,out);
+		my_data->out=out;
+	}
+}
+//1.28
+inline void SPAPI_GetTradeCount(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_GetTradeCount(user_id,acc_no);
+}
+//1.29
+inline void SPAPI_GetAllTrades(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	vector<SPApiTrade> apiTradeList;
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetAllTrades(user_id,acc_no,apiTradeList);
+	if(rc==0){
+		json out;
+		COPY_VECTOR_TO_JSON(SPApiTrade,apiTradeList,out);
+		if(apiTradeList_size>0){
+			my_data->out=out;
+		}
+	}
 }
 //1.31
 inline void SPAPI_SubscribePrice(ShareDataCall * my_data){
@@ -667,11 +696,13 @@ inline void SPAPI_GetPriceByCode(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
-	SPApiPrice price={0};//memset(&price, 0, sizeof(SPApiPrice));
-	my_data->rc = apiProxyWrapper.SPAPI_GetPriceByCode(user_id,prod_code,&price);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
-	json out;
-	COPY_TO_JSON(SPApiPrice,price,out);
-	my_data->out=out;
+	SPApiPrice price={0};
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetPriceByCode(user_id,prod_code,&price);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiPrice,price,out);
+		my_data->out=out;
+	}
 }
 //1.33
 inline void SPAPI_LoadInstrumentList(ShareDataCall * my_data){
@@ -685,32 +716,51 @@ inline void SPAPI_GetInstrumentCount(ShareDataCall * my_data){
 inline void SPAPI_GetInstrument(ShareDataCall * my_data){
 	json in=my_data->in;
 	vector<SPApiInstrument> apiInstList;
-	my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
-	json out;
-	for (int i = 0; i < apiInstList.size(); i++) {
-		SPApiInstrument& inst = apiInstList[i];
-		COPY_TO_JSON(SPApiInstrument,inst,out[i]);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
+	if(rc==0){
+		json out;
+		COPY_VECTOR_TO_JSON(SPApiInstrument,apiInstList,out);
+		if(apiInstList_size>0){
+			my_data->out=out;
+		}
 	}
-	my_data->out=out;
+}
+//1.37
+inline void SPAPI_GetInstrumentByCode(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["inst_code"],inst_code);
+	SPApiInstrument inst={0};
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentByCode(inst_code, &inst);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiInstrument,inst,out);
+		my_data->out=out;
+	}
+}
+//1.38
+inline void SPAPI_GetProductCount(ShareDataCall * my_data){
+	json in=my_data->in;
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetProductCount();
 }
 //1.39
 inline void SPAPI_GetProduct(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["inst_code"],inst_code);
 	vector<SPApiProduct> apiProdList;
-	my_data->rc = apiProxyWrapper.SPAPI_GetProduct(apiProdList);
-	json out;
-	for (int i = 0; i < apiProdList.size(); i++) {
-		SPApiProduct& prod = apiProdList[i];
-		COPY_TO_JSON(SPApiProduct,prod,out[i]);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetProduct(apiProdList);
+	if(rc==0){
+		json out;
+		COPY_VECTOR_TO_JSON(SPApiProduct,apiProdList,out);
+		if(apiProdList_size>0){
+			my_data->out=out;
+		}
 	}
-	my_data->out=out;
 }
 //1.41
 inline void SPAPI_GetProductByCode(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["prod_code"],prod_code);
-	SPApiProduct prod={0};//memset(&prod, 0, sizeof(SPApiProduct));
+	SPApiProduct prod={0};
 	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 	if (my_data->rc == 0){
 		json out;
@@ -730,23 +780,55 @@ inline void SPAPI_GetAllAccBal(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	vector<SPApiAccBal> apiAccBalList;
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetAllAccBal(user_id,apiAccBalList);
-	if (rc == 0){
-		int apiAccBalList_size = apiAccBalList.size();
+	if(rc==0){
+		json out;
+		COPY_VECTOR_TO_JSON(SPApiAccBal,apiAccBalList,out);
 		if(apiAccBalList_size>0){
-			json out;
-			for (int i = 0; i < apiAccBalList_size; i++) {
-				SPApiAccBal& val = apiAccBalList[i];
-				COPY_TO_JSON(SPApiAccBal,val,out[i]);
-			}
 			my_data->out=out;
 		}
 	}
+}
+//1.45
+inline void SPAPI_GetAccBalByCurrency(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["ccy"],ccy);
+	SPApiAccBal acc_bal={0};
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetAccBalByCurrency(user_id,ccy,&acc_bal);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiAccBal,acc_bal,out);
+		my_data->out=out;
+	}
+}
+//1.46
+inline void SPAPI_SubscribeTicker(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["prod_code"],prod_code);
+	COPY_TO_INT(in["mode"],mode);
+	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeTicker(user_id, prod_code, mode);
+}
+//1.47
+inline void SPAPI_SubscribeQuoteRequest(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["prod_code"],prod_code);
+	COPY_TO_INT(in["mode"],mode);
+	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeQuoteRequest(user_id, prod_code, mode);
+}
+//1.48
+inline void SPAPI_SubscribeAllQuoteRequest(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_INT(in["mode"],mode);
+	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeAllQuoteRequest(user_id, mode);
 }
 //1.49
 inline void SPAPI_GetAccInfo(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
-	SPApiAccInfo acc_info={0};//memset(&acc_info, 0, sizeof(SPApiAccInfo));
+	SPApiAccInfo acc_info={0};
 	int rc= my_data->rc = apiProxyWrapper.SPAPI_GetAccInfo(user_id, &acc_info);
 	if (rc == 0){
 		json out;
@@ -773,11 +855,53 @@ inline void SPAPI_LoadProductInfoListByCode(ShareDataCall * my_data){
 	COPY_TO_STR(in["inst_code"],inst_code);
 	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
 }
+//1.52
+inline void SPAPI_SetApiLogPath(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["path"],path);
+	my_data->rc = apiProxyWrapper.SPAPI_SetApiLogPath(path);
+}
+//1.53
+inline void SPAPI_GetCcyRateByCcy(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["ccy"],ccy);
+	double rate;
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetCcyRateByCcy(user_id,ccy, rate);
+	if(rc==0){
+		json out;
+		out["rate"]=rate;
+		my_data->out=out;
+	}
+}
+//1.54
+inline void SPAPI_AccountLogin(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_AccountLogin(user_id,acc_no);
+}
+//1.55
+inline void SPAPI_AccountLogout(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_AccountLogout(user_id,acc_no);
+}
+//1.56
+inline void SPAPI_SendAccControl(ShareDataCall * my_data){
+	json in=my_data->in;
+	COPY_TO_STR(in["user_id"],user_id);
+	COPY_TO_STR(in["acc_no"],acc_no);
+	char ctrl_mask=in["ctrl_mask"].get<char>();
+	char ctrl_level=in["ctrl_level"].get<char>();
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_SendAccControl(user_id,acc_no,ctrl_mask,ctrl_level);
+}
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
 std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 	ITR(DFN_FNC_PTR,EXPAND( //API 20161216:
-				//SPAPI_Initialize,//1.1
-				//SPAPI_Uninitialize,//1.2
+				//SPAPI_Initialize,//1.1 ignore
+				//SPAPI_Uninitialize,//1.2 ignore
 				SPAPI_SetLanguageId,//1.3
 				SPAPI_SetLoginInfo,//1.4
 				SPAPI_Login,//1.5
@@ -792,7 +916,7 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_GetOrderByOrderNo,//1.13
 				SPAPI_GetOrderCount,//1.14 use with SPAPI_GetOrdersByArray
 				SPAPI_GetActiveOrders,//1.15
-				SPAPI_GetOrdersByArray,//1.16 作用不大，仅做为ByArray类的用法的e.g.算了...
+				//SPAPI_GetOrdersByArray,//1.16 作用不大，仅做为ByArray类的用法的e.g.
 				SPAPI_DeleteOrderBy,//1.17
 				SPAPI_DeleteAllOrders,//1.18 
 				SPAPI_ActivateOrderBy,//1.19
@@ -805,11 +929,11 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_GetPosCount,//1.24 use with SPAPI_GetAllPosByArray
 				SPAPI_GetAllPos,//1.25
 				//SPAPI_GetAllPosByArray,//1.26 暂时没用
-				SPAPI_GetPosByProduct,//1.27 TODO
+				SPAPI_GetPosByProduct,//1.27
 				//持仓相关：}
 				//成交相关：{
-				//SPAPI_GetTradeCount,//1.28 TODO
-				//SPAPI_GetAllTrades,//1.29 TODO
+				SPAPI_GetTradeCount,//1.28
+				SPAPI_GetAllTrades,//1.29
 				//SPAPI_GetAllTradeByArray,//1.30 暂时没用
 				//成交相关：}
 				//行情相关：{
@@ -818,11 +942,11 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				//行情相关：}
 				//市场及产品相关{
 				SPAPI_LoadInstrumentList,//1.33
-				SPAPI_GetInstrumentCount,//1.34 作用不大，先忽略.
+				SPAPI_GetInstrumentCount,//1.34 作用不大 use with SPAPI_GetInstrumentByArray
 				SPAPI_GetInstrument,//1.35 获得市场信息,Instrument其实跟市场差不多，估计用市场歧义多，所以他们用这个TERMS(Instrument)
-				//SPAPI_GetInstrumentByArray,//1.36 暂时不需要，用1.35先顶着用.
-				//SPAPI_GetInstrumentByCode,//1.37 暂时没用,后面可能需要更新单个市场信息设定时可能需要.
-				//SPAPI_GetProductCount,//1.38 暂时没用
+				//SPAPI_GetInstrumentByArray,//1.36 暂时不需要
+				SPAPI_GetInstrumentByCode,//1.37 暂时没用,后面可能需要更新单个市场信息设定时可能需要.
+				SPAPI_GetProductCount,//1.38
 				SPAPI_GetProduct,//1.39
 				//SPAPI_GetProductByArray,//1.40 暂时没用
 				SPAPI_GetProductByCode,//1.41
@@ -831,18 +955,18 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_GetAccBalCount,//1.42 //获取现金结余的数量
 				SPAPI_GetAllAccBal,//1.43,注：此方法如果是AE登入需要AccountLogin一个客户才能取客户数据.
 				//SPAPI_GetAllAccBalByArray,//1.44 暂时没用
-				//SPAPI_GetAccBalByCurrency,//1.45 暂时没用
-				//SPAPI_SubscribeTicker,//1.46 TODO
-				//SPAPI_SubscribeQuoteRequest,//1.47 TODO
-				//SPAPI_SubscribeAllQuoteRequest,//1.48 TODO
+				SPAPI_GetAccBalByCurrency,//1.45
+				SPAPI_SubscribeTicker,//1.46
+				SPAPI_SubscribeQuoteRequest,//1.47
+				SPAPI_SubscribeAllQuoteRequest,//1.48
 				SPAPI_GetAccInfo,//1.49
 				SPAPI_GetDllVersion,//1.50
 				SPAPI_LoadProductInfoListByCode,//1.51
-				//SPAPI_SetApiLogPath,//1.52 暂时没用
-				//SPAPI_GetCcyRateByCcy,//1.53 暂时没用
-				//SPAPI_AccountLogin,//1.54 暂时没用, 该方法只针对AE,当AE登录后可选择性登录账户
-				//SPAPI_AccountLogout,//1.55 暂时没用
-				//SPAPI_SendAccControl,//1.56 暂时没用
+				SPAPI_SetApiLogPath,//1.52
+				SPAPI_GetCcyRateByCcy,//1.53
+				SPAPI_AccountLogin,//1.54
+				SPAPI_AccountLogout,//1.55
+				SPAPI_SendAccControl,//1.56
 				))
 };
 // NOTES: In this worker thread, you cannot access any V8/node js variables

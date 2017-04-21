@@ -5,8 +5,29 @@
 //#include "SPApiProxyDataType.h"
 //#include "ApiProxyWrapperReply.h"
 
+#define COPY_V8_TO_STR(aaa,kkk)\
+	v8::Local<v8::String> in_##kkk = v8::Local<v8::String>::Cast(aaa);\
+	char kkk[255]={0};\
+	V8ToCharPtr(in_##kkk,kkk);
+#define COPY_TO_INT(aaa,kkk)\
+	int kkk=0;\
+	if(aaa.is_number_integer()){ kkk=aaa; }
+#define COPY_TO_LNG(aaa,kkk)\
+	long kkk=0;\
+	if(aaa.is_number_integer()){ kkk=aaa; }
+#define COPY_TO_DBL(aaa,kkk)\
+	double kkk=0;\
+	if(aaa.is_number_float()){ kkk=aaa; }
+#define COPY_TO_STR(aaa,kkk)\
+	char kkk[255]={0};\
+	if(aaa.is_string()){\
+		string str_in_##kkk=aaa;\
+		strcpy(kkk,str_in_##kkk.c_str());\
+	}
 #define COPY_STF(sss,ttt,fff) ttt[#fff]=sss.fff;
-#define COPY_TO_STF(sss,ttt,fff) ttt.fff=sss[#fff];
+#define COPY_TO_STF_VAL(sss,ttt,fff) if(!sss.is_null())ttt.fff=sss[#fff];
+#define COPY_TO_STF_STR(sss,ttt,fff) if(!sss.is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
+#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss.is_null())ttt.fff,sss[#fff].get<char>();
 
 #define COPY_SPApiPos_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
 			Qty,\
@@ -214,90 +235,60 @@
 			))
 
 //#define COPY_TO_JSON(structName,$src,$tgt) EVAL(CAT(CAT(COPY_,structName),_FIELDS)($src,$tgt))
-//#define COPY_TO_JSON(structName,$src,$tgt) EVAL(MCAT(COPY_,structName,_FIELDS))($src,$tgt)
 #define COPY_TO_JSON(structName,$src,$tgt) MCAT(COPY_,structName,_FIELDS)($src,$tgt)
 
-/*
-#define COPY_TO_SPApiTrade_FIELDS(sss,ttt) \
-	ttt.RecNo=sss["RecNo"];\
-	ttt.Price=sss["Price"];\
-	ttt.TradeNo=sss["TradeNo"];\
-	ttt.ExtOrderNo=sss["ExtOrderNo"];\
-	ttt.IntOrderNo=sss["IntOrderNo"];\
-	ttt.Qty=sss["Qty"];\
-	ttt.TradeDate=sss["TradeDate"];\
-	ttt.TradeTime=sss["TradeTime"];\
-	ttt.AccNo=sss["AccNo"];\
-	ttt.ProdCode=sss["ProdCode"];\
-	ttt.Initiator=sss["Initiator"];\
-	ttt.Ref=sss["Ref"];\
-	ttt.Ref2=sss["Ref2"];\
-	ttt.GatewayCode=sss["GatewayCode"];\
-	ttt.ClOrderId=sss["ClOrderId"];\
-	ttt.BuySell=sss["BuySell"];\
-	ttt.OpenClose=sss["OpenClose"];\
-	ttt.Status=sss["Status"];\
-	ttt.DecInPrice=sss["DecInPrice"];\
-	ttt.OrderPrice=sss["OrderPrice"];\
-	ttt.TradeRef=sss["TradeRef"];\
-	ttt.TotalQty=sss["TotalQty"];\
-	ttt.RemainingQty=sss["RemainingQty"];\
-	ttt.TradedQty=sss["TradedQty"];\
-	ttt.AvgTradedPrice=sss["AvgTradedPrice"];
-	*/
-
 #define COPY_TO_SPApiOrder_FIELDS(sss,ttt) \
-	if(!sss["Price"].is_null())ttt.Price=sss["Price"];\
-	if(!sss["StopLevel"].is_null())ttt.StopLevel=sss["StopLevel"];\
-	if(!sss["UpLevel"].is_null())ttt.UpLevel=sss["UpLevel"];\
-	if(!sss["UpPrice"].is_null())ttt.UpPrice=sss["UpPrice"];\
-	if(!sss["DownLevel"].is_null())ttt.DownLevel=sss["DownLevel"];\
-	if(!sss["DownPrice"].is_null())ttt.DownPrice=sss["DownPrice"];\
-	if(!sss["ExtOrderNo"].is_null())ttt.ExtOrderNo=sss["ExtOrderNo"];\
-	if(!sss["IntOrderNo"].is_null())ttt.IntOrderNo=sss["IntOrderNo"];\
-	if(!sss["Qty"].is_null())ttt.Qty=sss["Qty"];\
-	if(!sss["TradedQty"].is_null())ttt.TradedQty=sss["TradedQty"];\
-	if(!sss["TotalQty"].is_null())ttt.TotalQty=sss["TotalQty"];\
-	if(!sss["ValidTime"].is_null())ttt.ValidTime=sss["ValidTime"];\
-	if(!sss["SchedTime"].is_null())ttt.SchedTime=sss["SchedTime"];\
-	if(!sss["TimeStamp"].is_null())ttt.TimeStamp=sss["TimeStamp"];\
-	if(!sss["OrderOptions"].is_null())ttt.OrderOptions=sss["OrderOptions"];\
-	if(!sss["AccNo"].is_null())strcpy(ttt.AccNo,sss["AccNo"].get<string>().c_str());\
-	if(!sss["ProdCode"].is_null())strcpy(ttt.ProdCode,sss["ProdCode"].get<string>().c_str());\
-	if(!sss["Initiator"].is_null())strcpy(ttt.Initiator,sss["Initiator"].get<string>().c_str());\
-	if(!sss["Ref"].is_null())strcpy(ttt.Ref,sss["Ref"].get<string>().c_str());\
-	if(!sss["Ref2"].is_null())strcpy(ttt.Ref2,sss["Ref2"].get<string>().c_str());\
-	if(!sss["GatewayCode"].is_null())strcpy(ttt.GatewayCode,sss["GatewayCode"].get<string>().c_str());\
-	if(!sss["ClOrderId"].is_null())strcpy(ttt.ClOrderId,sss["ClOrderId"].get<string>().c_str());\
-	if(!sss["BuySell"].is_null())ttt.BuySell=sss["BuySell"].get<char>();\
-	if(!sss["StopType"].is_null())ttt.StopType=sss["StopType"].get<char>();\
-	if(!sss["OpenClose"].is_null())ttt.OpenClose=sss["OpenClose"].get<char>();\
-	if(!sss["ClOrderId"].is_null())ttt.CondType=sss["CondType"].get<char>();\
-	if(!sss["OrderType"].is_null())ttt.OrderType=sss["OrderType"].get<char>();\
-	if(!sss["ValidType"].is_null())ttt.ValidType=sss["ValidType"].get<char>();\
-	if(!sss["Status"].is_null())ttt.Status=sss["Status"].get<char>();\
-	if(!sss["DecInPrice"].is_null())ttt.DecInPrice=sss["DecInPrice"].get<char>();\
-	if(!sss["OrderAction"].is_null())ttt.OrderAction=sss["OrderAction"].get<char>();\
-	if(!sss["UpdateTime"].is_null())ttt.UpdateTime=sss["UpdateTime"].get<int>();\
-	if(!sss["UpdateSeqNo"].is_null())ttt.UpdateSeqNo=sss["UpdateSeqNo"].get<int>();
+	COPY_TO_STF_VAL(sss,ttt,Price);\
+	COPY_TO_STF_VAL(sss,ttt,StopLevel);\
+	COPY_TO_STF_VAL(sss,ttt,UpLevel);\
+	COPY_TO_STF_VAL(sss,ttt,UpPrice);\
+	COPY_TO_STF_VAL(sss,ttt,DownLevel);\
+	COPY_TO_STF_VAL(sss,ttt,DownPrice);\
+	COPY_TO_STF_VAL(sss,ttt,ExtOrderNo);\
+	COPY_TO_STF_VAL(sss,ttt,IntOrderNo);\
+	COPY_TO_STF_VAL(sss,ttt,Qty);\
+	COPY_TO_STF_VAL(sss,ttt,TradedQty);\
+	COPY_TO_STF_VAL(sss,ttt,TotalQty);\
+	COPY_TO_STF_VAL(sss,ttt,ValidTime);\
+	COPY_TO_STF_VAL(sss,ttt,SchedTime);\
+	COPY_TO_STF_VAL(sss,ttt,TimeStamp);\
+	COPY_TO_STF_VAL(sss,ttt,OrderOptions);\
+	COPY_TO_STF_STR(sss,ttt,AccNo);\
+	COPY_TO_STF_STR(sss,ttt,ProdCode);\
+	COPY_TO_STF_STR(sss,ttt,Initiator);\
+	COPY_TO_STF_STR(sss,ttt,Ref);\
+	COPY_TO_STF_STR(sss,ttt,Ref2);\
+	COPY_TO_STF_STR(sss,ttt,GatewayCode);\
+	COPY_TO_STF_STR(sss,ttt,ClOrderId);\
+	COPY_TO_STF_CHR(sss,ttt,BuySell);\
+	COPY_TO_STF_CHR(sss,ttt,StopType);\
+	COPY_TO_STF_CHR(sss,ttt,OpenClose);\
+	COPY_TO_STF_CHR(sss,ttt,CondType);\
+	COPY_TO_STF_CHR(sss,ttt,OrderType);\
+	COPY_TO_STF_CHR(sss,ttt,ValidType);\
+	COPY_TO_STF_CHR(sss,ttt,Status);\
+	COPY_TO_STF_CHR(sss,ttt,DecInPrice);\
+	COPY_TO_STF_CHR(sss,ttt,OrderAction);\
+	COPY_TO_STF_CHR(sss,ttt,UpdateTime);\
+	COPY_TO_STF_CHR(sss,ttt,UpdateSeqNo);
 
 #define COPY_TO_SPApiMMOrder_FIELDS(sss,ttt) \
-	ttt.BidExtOrderNo=sss["BidExtOrderNo"];\
-	ttt.AskExtOrderNo=sss["AskExtOrderNo"];\
-	ttt.BidAccOrderNo=sss["BidAccOrderNo"];\
-	ttt.AskAccOrderNo=sss["AskAccOrderNo"];\
-	ttt.BidPrice=sss["BidPrice"];\
-	ttt.AskPrice=sss["AskPrice"];\
-	ttt.BidQty=sss["BidQty"];\
-	ttt.AskQty=sss["AskQty"];\
-	ttt.SpecTime=sss["SpecTime"];\
-	ttt.OrderOptions=sss["OrderOptions"];\
-	strcpy(ttt.ProdCode,sss["ProdCode"].get<string>().c_str());\
-	strcpy(ttt.AccNo,sss["AccNo"].get<string>().c_str());\
-	strcpy(ttt.ClOrderId,sss["ClOrderId"].get<string>().c_str());\
-	ttt.OrderType=sss["OrderType"].get<char>();\
-	ttt.ValidType=sss["ValidType"].get<char>();\
-	ttt.DecInPrice=sss["DecInPrice"].get<char>();
+	COPY_TO_STF_VAL(sss,ttt,BidExtOrderNo);\
+	COPY_TO_STF_VAL(sss,ttt,AskExtOrderNo);\
+	COPY_TO_STF_VAL(sss,ttt,BidAccOrderNo);\
+	COPY_TO_STF_VAL(sss,ttt,AskAccOrderNo);\
+	COPY_TO_STF_VAL(sss,ttt,BidPrice);\
+	COPY_TO_STF_VAL(sss,ttt,AskPrice);\
+	COPY_TO_STF_VAL(sss,ttt,BidQty);\
+	COPY_TO_STF_VAL(sss,ttt,AskQty);\
+	COPY_TO_STF_VAL(sss,ttt,SpecTime);\
+	COPY_TO_STF_VAL(sss,ttt,OrderOptions);\
+	COPY_TO_STF_STR(sss,ttt,ProdCode);\
+	COPY_TO_STF_STR(sss,ttt,AccNo);\
+	COPY_TO_STF_STR(sss,ttt,ClOrderId);\
+	COPY_TO_STF_CHR(sss,ttt,OrderType);\
+	COPY_TO_STF_CHR(sss,ttt,ValidType);\
+	COPY_TO_STF_CHR(sss,ttt,DecInPrice);
 
 #define COPY_TO_STRUCT($structName,$src,$tgt) \
 	$structName $tgt;\

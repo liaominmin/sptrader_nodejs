@@ -1,8 +1,8 @@
 #include "include/ApiProxyWrapper.h"
 #include "include/ApiProxyWrapperReply.h"
 #include "macromagic.h"
-#include "ApiProxyWrapperTypes.h"
 #include <v8.h>
+#include "ApiProxyWrapperTypes.h"
 #define EXPORT_DECLARE(fff) void fff(const v8::FunctionCallbackInfo<v8::Value>& args);
 class SpTraderLogic : public ApiProxyWrapperReply
 {
@@ -91,14 +91,8 @@ std::string any2utf8(std::string in,std::string fromEncode,std::string toEncode)
 	if(rst==0){ return std::string(outbuf);
 	}else{ return in; }
 }
-std::string gbk2utf8(const char* in)
-{
-	return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8"));
-}
-std::string big2utf8(const char* in)
-{
-	return any2utf8(std::string(in),std::string("big5"),std::string("utf-8"));
-}
+std::string gbk2utf8(const char* in) { return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8")); }
+std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::string("big5"),std::string("utf-8")); }
 struct ShareDataOn //for on()
 {
 	uv_work_t request;//@ref uv_queue_work()
@@ -125,7 +119,6 @@ inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
 	const char* rt0=(*value ? *value : "<string conversion failed>");
 	strcpy(rt,rt0);
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //http://stackoverflow.com/questions/34356686/how-to-convert-v8string-to-const-char
 //char* V8_To_c_str(const v8::String::Utf8Value& value){
 //	char* rt=(char*) (*value ? *value : "<string conversion failed>");
@@ -161,52 +154,12 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
-#define COPY_V8_TO_STR(aaa,kkk)\
-	v8::Local<v8::String> in_##kkk = v8::Local<v8::String>::Cast(aaa);\
-	char kkk[255]={0};\
-	V8ToCharPtr(in_##kkk,kkk);
-#define COPY_TO_INT(aaa,kkk)\
-	int kkk=0;\
-	if(aaa.is_number_integer()){ kkk=aaa; }
-#define COPY_TO_LNG(aaa,kkk)\
-	long kkk=0;\
-	if(aaa.is_number_integer()){ kkk=aaa; }
-#define COPY_TO_DBL(aaa,kkk)\
-	double kkk=0;\
-	if(aaa.is_number_float()){ kkk=aaa; }
-#define COPY_TO_STR(aaa,kkk)\
-	char kkk[255]={0};\
-	if(aaa.is_string()){\
-		string str_in_##kkk=aaa;\
-		strcpy(kkk,str_in_##kkk.c_str());\
-	}
-#define METHOD_START_ONCALL($methodname)\
-	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
-		int args_len=args.Length();\
-		v8::Isolate* isolate = args.GetIsolate();\
-		v8::Local<v8::Object> rt=  v8::Object::New(isolate);\
-		v8::Local<v8::Object> out= v8::Object::New(isolate);\
-		v8::Local<v8::Object> in = v8::Object::New(isolate);\
-		v8::Local<v8::Function> callback;\
-		if (args_len>0){\
-			if(args[args_len-1]->IsFunction()){\
-				callback = v8::Local<v8::Function>::Cast(args[args_len-1]);\
-				if(args_len>2){\
-					in = v8::Local<v8::Object>::Cast(args[args_len-2]);\
-				}\
-			}else{\
-				if(args_len>1){\
-					in = v8::Local<v8::Object>::Cast(args[args_len-1]);\
-				}\
-			}\
-		}\
-		int rc=0;
-#define METHOD_END_ONCALL($methodname)\
-		rt->Set(v8::String::NewFromUtf8(isolate,"in"), in);\
-		rt->Set(v8::String::NewFromUtf8(isolate,"out"), out);\
-		rt->Set(v8::String::NewFromUtf8(isolate,"rc"), v8::Integer::New(isolate,rc));\
-		args.GetReturnValue().Set(rt);\
-	}
+#define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
+	ShareDataOn * req_data = new ShareDataOn;\
+	req_data->strCallback=string(#$callbackName);\
+	req_data->request.data = req_data;\
+	req_data->j_rt=$jsonData;\
+	uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_on,after_worker_for_on);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SpTraderLogic::SpTraderLogic(void){
 	apiProxyWrapper.SPAPI_Initialize();//1.1
@@ -216,13 +169,6 @@ SpTraderLogic::~SpTraderLogic(void){
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
-	ShareDataOn * req_data = new ShareDataOn;\
-	req_data->strCallback=string(#$callbackName);\
-	req_data->request.data = req_data;\
-	req_data->j_rt=$jsonData;\
-	uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_on,after_worker_for_on);
 //0
 void SpTraderLogic::OnTest()
 {
@@ -549,8 +495,7 @@ inline void SPAPI_GetActiveOrders(ShareDataCall * my_data){
 	}
 }
 //1.16
-//Just Example which don't use!
-//仅留作当例子，因为比Vector麻烦，尽量不要使用所有 "ByArray" 型的函数.
+//Just Example which don't use!  //仅留作当例子，因为比Vector麻烦，尽量不要使用所有 "ByArray" 型的函数.
 //inline void SPAPI_GetOrdersByArray(ShareDataCall * my_data){
 //	json in=my_data->in;
 //	COPY_TO_STR(in["user_id"],user_id);
@@ -617,11 +562,6 @@ inline void SPAPI_InactivateAllOrders(ShareDataCall * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_InactivateAllOrders(user_id,acc_no);
 }
 //1.23
-//注：
-//(AskAccOrderNo且AskExtOrderNo) 或 (BidAccOrderNo且 BidAccOrderNo)
-//1：如果填上工作中订单相对应编号将修改前订单。
-//2：填0表示下新单。
-//3：如果填上工作中订单相对应编号，且Qty=0 就是删除此订单。
 inline void SPAPI_SendMarketMakingOrder(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
@@ -1002,6 +942,33 @@ void after_worker_for_call(uv_work_t * req,int status){
 	}
 	delete my_data;
 }
+#define METHOD_START_ONCALL($methodname)\
+	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
+		int args_len=args.Length();\
+		v8::Isolate* isolate = args.GetIsolate();\
+		v8::Local<v8::Object> rt=  v8::Object::New(isolate);\
+		v8::Local<v8::Object> out= v8::Object::New(isolate);\
+		v8::Local<v8::Object> in = v8::Object::New(isolate);\
+		v8::Local<v8::Function> callback;\
+		if (args_len>0){\
+			if(args[args_len-1]->IsFunction()){\
+				callback = v8::Local<v8::Function>::Cast(args[args_len-1]);\
+				if(args_len>2){\
+					in = v8::Local<v8::Object>::Cast(args[args_len-2]);\
+				}\
+			}else{\
+				if(args_len>1){\
+					in = v8::Local<v8::Object>::Cast(args[args_len-1]);\
+				}\
+			}\
+		}\
+		int rc=0;
+#define METHOD_END_ONCALL($methodname)\
+		rt->Set(v8::String::NewFromUtf8(isolate,"in"), in);\
+		rt->Set(v8::String::NewFromUtf8(isolate,"out"), out);\
+		rt->Set(v8::String::NewFromUtf8(isolate,"rc"), v8::Integer::New(isolate,rc));\
+		args.GetReturnValue().Set(rt);\
+	}
 METHOD_START_ONCALL(on){
 	COPY_V8_TO_STR(args[0],on);
 	if(!callback.IsEmpty()){

@@ -909,6 +909,9 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 				SPAPI_SendAccControl,//1.56
 				))
 };
+#include <exception>
+#include <typeinfo>
+#include <stdexcept>
 // NOTES: In this worker thread, you cannot access any V8/node js variables
 void worker_for_call(uv_work_t * req){
 	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
@@ -919,7 +922,18 @@ void worker_for_call(uv_work_t * req){
 	rst["in"]=in;
 	void (*fcnPtr)(ShareDataCall * my_data) = _apiDict[api];
 	if(NULL!=fcnPtr){
-		fcnPtr(my_data);
+		try{
+			fcnPtr(my_data);
+		} catch (const std::exception& e) {
+			// this executes if f() throws std::logic_error (base class rule)
+			rst["STS"]="KO";
+			rst["errmsg"]=e.what();
+		} catch (...) {
+			// this executes if f() throws std::string or int or any other unrelated type
+			rst["STS"]="KO";
+			std::exception_ptr p = std::current_exception();
+			rst["errmsg"]=(p ? p.__cxa_exception_type()->name() : "null");
+		}
 	}else{
 		rst["STS"]="KO";
 		rst["errmsg"]="not found api:"+api;

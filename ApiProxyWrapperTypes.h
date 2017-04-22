@@ -27,7 +27,9 @@
 #define COPY_STF(sss,ttt,fff) ttt[#fff]=sss.fff;
 #define COPY_TO_STF_VAL(sss,ttt,fff) if(!sss[#fff].is_null())ttt.fff=sss[#fff];
 #define COPY_TO_STF_STR(sss,ttt,fff) if(!sss[#fff].is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
-#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())ttt.fff,sss[#fff].get<char>();
+//#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())try{ttt.fff,sss[#fff].get<char>();}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].get<char>() <<endl;}
+#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())try{char c_##fff[1];strncpy(c_##fff,sss[#fff].get<string>().c_str(),1);ttt.fff=c_##fff[0];}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].dump() <<endl;}
+#define COPY_TO_STF_TINYINT(sss,ttt,fff) if(!sss[#fff].is_null())try{int i_##fff;i_##fff=sss[#fff];ttt.fff=(tinyint)i_##fff;}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].dump() <<endl;}
 
 #define COPY_SPApiPos_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
 			Qty,\
@@ -263,14 +265,14 @@
 	COPY_TO_STF_CHR(sss,ttt,BuySell);\
 	COPY_TO_STF_CHR(sss,ttt,StopType);\
 	COPY_TO_STF_CHR(sss,ttt,OpenClose);\
-	COPY_TO_STF_CHR(sss,ttt,CondType);\
-	COPY_TO_STF_CHR(sss,ttt,OrderType);\
-	COPY_TO_STF_CHR(sss,ttt,ValidType);\
-	COPY_TO_STF_CHR(sss,ttt,Status);\
-	COPY_TO_STF_CHR(sss,ttt,DecInPrice);\
-	COPY_TO_STF_CHR(sss,ttt,OrderAction);\
-	COPY_TO_STF_CHR(sss,ttt,UpdateTime);\
-	COPY_TO_STF_CHR(sss,ttt,UpdateSeqNo);
+	COPY_TO_STF_TINYINT(sss,ttt,CondType);\
+	COPY_TO_STF_TINYINT(sss,ttt,OrderType);\
+	COPY_TO_STF_TINYINT(sss,ttt,ValidType);\
+	COPY_TO_STF_TINYINT(sss,ttt,Status);\
+	COPY_TO_STF_TINYINT(sss,ttt,DecInPrice);\
+	COPY_TO_STF_TINYINT(sss,ttt,OrderAction);\
+	COPY_TO_STF_VAL(sss,ttt,UpdateTime);\
+	COPY_TO_STF_VAL(sss,ttt,UpdateSeqNo);
 
 #define COPY_TO_SPApiMMOrder_FIELDS(sss,ttt) \
 	COPY_TO_STF_VAL(sss,ttt,BidExtOrderNo);\
@@ -286,9 +288,9 @@
 	COPY_TO_STF_STR(sss,ttt,ProdCode);\
 	COPY_TO_STF_STR(sss,ttt,AccNo);\
 	COPY_TO_STF_STR(sss,ttt,ClOrderId);\
-	COPY_TO_STF_CHR(sss,ttt,OrderType);\
-	COPY_TO_STF_CHR(sss,ttt,ValidType);\
-	COPY_TO_STF_CHR(sss,ttt,DecInPrice);
+	COPY_TO_STF_TINYINT(sss,ttt,OrderType);\
+	COPY_TO_STF_TINYINT(sss,ttt,ValidType);\
+	COPY_TO_STF_TINYINT(sss,ttt,DecInPrice);
 
 #define COPY_TO_STRUCT($structName,$src,$tgt) \
 	$structName $tgt;\

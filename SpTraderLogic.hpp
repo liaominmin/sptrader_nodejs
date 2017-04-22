@@ -427,14 +427,14 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 //1.9
 inline void SPAPI_AddOrder(ShareDataCall * my_data){
 	json in=my_data->in;
-	COPY_TO_STRUCT(SPApiOrder,in,ord);
-	my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&ord);
+	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
+	my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&order);
 }
 //1.10
 inline void SPAPI_AddInactiveOrder(ShareDataCall * my_data){
 	json in=my_data->in;
-	COPY_TO_STRUCT(SPApiOrder,in,ord);
-	my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&ord);
+	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
+	my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&order);
 }
 //1.11
 inline void SPAPI_ChangeOrder(ShareDataCall * my_data){
@@ -442,7 +442,7 @@ inline void SPAPI_ChangeOrder(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_DBL(in["org_price"],org_price);
 	COPY_TO_LNG(in["org_qty"],org_qty);
-	COPY_TO_STRUCT(SPApiOrder,in,order);
+	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
 	my_data->rc = apiProxyWrapper.SPAPI_ChangeOrder(user_id,&order,org_price,org_qty);
 }
 //1.12
@@ -565,7 +565,7 @@ inline void SPAPI_InactivateAllOrders(ShareDataCall * my_data){
 inline void SPAPI_SendMarketMakingOrder(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
-	COPY_TO_STRUCT(SPApiMMOrder,in,mmorder);
+	COPY_TO_STRUCT(SPApiMMOrder,in["mmorder"],mmorder);
 	my_data->rc = apiProxyWrapper.SPAPI_SendMarketMakingOrder(user_id,&mmorder);
 }
 //1.24

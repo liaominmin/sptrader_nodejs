@@ -72,15 +72,31 @@
 			TickSize,\
 			));\
 			ttt["ProdNameUtf8"]=gbk2utf8(sss.ProdName2);
+//#define COPY_SPApiPrice_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
+//			Bid[SP_MAX_DEPTH],\
+//			BidQty[SP_MAX_DEPTH],\
+//			BidTicket[SP_MAX_DEPTH],\
+//			Ask[SP_MAX_DEPTH],\
+//			AskQty[SP_MAX_DEPTH],\
+//			AskTicket[SP_MAX_DEPTH],\
+//			Last[SP_MAX_LAST],\
+//			LastQty[SP_MAX_LAST],\
+//			LastTime[SP_MAX_LAST],\
+//			Equil,\
+//			Open,\
+//			High,\
+//			Low,\
+//			Close,\
+//			CloseDate,\
+//			TurnoverVol,\
+//			TurnoverAmt,\
+//			OpenInt,\
+//			ProdCode,\
+//			ProdName,\
+//			DecInPrice,\
+//			Timestamp,\
+//			))
 #define COPY_SPApiPrice_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
-			BidQty[SP_MAX_DEPTH],\
-			BidTicket[SP_MAX_DEPTH],\
-			Ask[SP_MAX_DEPTH],\
-			AskQty[SP_MAX_DEPTH],\
-			AskTicket[SP_MAX_DEPTH],\
-			Last[SP_MAX_LAST],\
-			LastQty[SP_MAX_LAST],\
-			LastTime[SP_MAX_LAST],\
 			Equil,\
 			Open,\
 			High,\
@@ -94,7 +110,17 @@
 			ProdName,\
 			DecInPrice,\
 			Timestamp,\
-			))
+			));\
+			ttt["Bid"]=sss.Bid[0];\
+			ttt["BidQty"]=sss.BidQty[0];\
+			ttt["BidTicket"]=sss.BidTicket[0];\
+			ttt["Ask"]=sss.Ask[0];\
+			ttt["AskQty"]=sss.AskQty[0];\
+			ttt["AskTicket"]=sss.AskTicket[0];\
+			ttt["Last"]=sss.Last[0];\
+			ttt["LastQty"]=sss.LastQty[0];\
+			ttt["LastTime"]=sss.LastTime[0];\
+
 //wjc:以下官方可能未同步到linux版:
 //ExStateNo,\
 //TradeStateNo,\

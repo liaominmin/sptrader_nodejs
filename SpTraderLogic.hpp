@@ -274,7 +274,6 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 	json j;
 	j["rec_no"]=rec_no;
 	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
-
 	ASYNC_CALLBACK_FOR_ON(OrderReport,j);
 }
 //13
@@ -453,7 +452,12 @@ inline void SPAPI_ChangeOrder(ShareDataCall * my_data){
 	COPY_TO_DBL(in["org_price"],org_price);
 	COPY_TO_LNG(in["org_qty"],org_qty);
 	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
-	my_data->rc = apiProxyWrapper.SPAPI_ChangeOrder(user_id,&order,org_price,org_qty);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_ChangeOrder(user_id,&order,org_price,org_qty);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiOrder,order,out);
+		my_data->out=out;
+	}
 }
 //1.12
 inline void SPAPI_ChangeOrderBy(ShareDataCall * my_data){
@@ -473,6 +477,7 @@ inline void SPAPI_GetOrderByOrderNo(ShareDataCall * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	COPY_TO_LNG(in["int_order_no"],int_order_no);
+	//COPY_TO_STRUCT(SPApiOrder,in["order"],order);
 	SPApiOrder order={0};
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetOrderByOrderNo(user_id,acc_no,int_order_no,&order);
 	if(rc==0){
@@ -576,7 +581,12 @@ inline void SPAPI_SendMarketMakingOrder(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STRUCT(SPApiMMOrder,in["mmorder"],mmorder);
-	my_data->rc = apiProxyWrapper.SPAPI_SendMarketMakingOrder(user_id,&mmorder);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_SendMarketMakingOrder(user_id,&mmorder);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiMMOrder,mmorder,out);
+		my_data->out=out;
+	}
 }
 //1.24
 inline void SPAPI_GetPosCount(ShareDataCall * my_data){

@@ -293,7 +293,7 @@
 	COPY_TO_STF_TINYINT(sss,ttt,DecInPrice);
 
 #define COPY_TO_STRUCT($structName,$src,$tgt) \
-	$structName $tgt;\
+	$structName $tgt={0};\
 	MCAT(COPY_TO_,$structName,_FIELDS)($src,$tgt)
 
 #define COPY_VECTOR_TO_JSON($structName,$src,$tgt)\

@@ -25,9 +25,9 @@
 		strcpy(kkk,str_in_##kkk.c_str());\
 	}
 #define COPY_STF(sss,ttt,fff) ttt[#fff]=sss.fff;
-#define COPY_TO_STF_VAL(sss,ttt,fff) if(!sss.is_null())ttt.fff=sss[#fff];
-#define COPY_TO_STF_STR(sss,ttt,fff) if(!sss.is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
-#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss.is_null())ttt.fff,sss[#fff].get<char>();
+#define COPY_TO_STF_VAL(sss,ttt,fff) if(!sss[#fff].is_null())ttt.fff=sss[#fff];
+#define COPY_TO_STF_STR(sss,ttt,fff) if(!sss[#fff].is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
+#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())ttt.fff,sss[#fff].get<char>();
 
 #define COPY_SPApiPos_FIELDS(sss,ttt) ITR2(COPY_STF,sss,ttt,EXPAND(\
 			Qty,\

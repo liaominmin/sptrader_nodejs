@@ -428,13 +428,23 @@ inline void SPAPI_GetLoginStatus(ShareDataCall * my_data){
 inline void SPAPI_AddOrder(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
-	my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&order);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&order);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiOrder,order,out);
+		my_data->out=out;
+	}
 }
 //1.10
 inline void SPAPI_AddInactiveOrder(ShareDataCall * my_data){
 	json in=my_data->in;
 	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
-	my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&order);
+	int rc = my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&order);
+	if(rc==0){
+		json out;
+		COPY_TO_JSON(SPApiOrder,order,out);
+		my_data->out=out;
+	}
 }
 //1.11
 inline void SPAPI_ChangeOrder(ShareDataCall * my_data){

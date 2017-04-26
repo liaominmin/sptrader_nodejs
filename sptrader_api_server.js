@@ -15,7 +15,7 @@ function argv2o(argv){
 }
 
 var argo=argv2o(process.argv);
-logger.log("sptrader_api_server.argo=",argo);
+//logger.log("sptrader_api_server.argo=",argo);
 
 var hhh,ppp;
 var logicModule=require(argo.logic||"./sptrader_api_server_demo_logic.js");

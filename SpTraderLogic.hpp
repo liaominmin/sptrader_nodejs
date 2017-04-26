@@ -1010,12 +1010,12 @@ METHOD_START_ONCALL(on){
 	}
 }METHOD_END_ONCALL(on)
 /* async mode if has(callback),pls use as much as possible, 'coz sync mode might block the nodejs */
-METHOD_START_ONCALL(call){
+METHOD_START_ONCALL(_call){
 	if(args_len>0){
-		COPY_V8_TO_STR(args[0],call);
+		COPY_V8_TO_STR(args[0],_call);
 		ShareDataCall * req_data = new ShareDataCall;
 		req_data->request.data = req_data;
-		req_data->api=string(call);
+		req_data->api=string(_call);
 		req_data->in=json::parse(json_stringify(isolate,in));
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
@@ -1029,6 +1029,6 @@ METHOD_START_ONCALL(call){
 						));
 			rc=req_data->rc;
 		}
-		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,call));
+		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,_call));
 	}
-}METHOD_END_ONCALL(call)
+}METHOD_END_ONCALL(_call)

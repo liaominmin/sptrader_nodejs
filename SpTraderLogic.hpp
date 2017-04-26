@@ -971,6 +971,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 		const unsigned argc = 1;
 		json rst=my_data->rst;
 		rst["rc"]=my_data->rc;
+		if(0==my_data->rc) rst["STS"]="OK";
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
@@ -1028,6 +1029,9 @@ METHOD_START_ONCALL(_call){
 						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
 						));
 			rc=req_data->rc;
+			if(0==rc){
+				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"OK"));
+			}
 		}
 		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,_call));
 	}

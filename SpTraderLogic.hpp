@@ -93,7 +93,7 @@ std::string any2utf8(std::string in,std::string fromEncode,std::string toEncode)
 }
 std::string gbk2utf8(const char* in) { return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8")); }
 std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::string("big5"),std::string("utf-8")); }
-struct ShareDataOn //for on()
+struct ShareDataOn //for _on()
 {
 	uv_work_t request;//@ref uv_queue_work()
 	json j_rt;//the data to send back
@@ -1004,12 +1004,12 @@ void after_worker_for_call(uv_work_t * req,int status){
 		rt->Set(v8::String::NewFromUtf8(isolate,"rc"), v8::Integer::New(isolate,rc));\
 		args.GetReturnValue().Set(rt);\
 	}
-METHOD_START_ONCALL(on){
-	COPY_V8_TO_STR(args[0],on);
+METHOD_START_ONCALL(_on){
+	COPY_V8_TO_STR(args[0],_on);
 	if(!callback.IsEmpty()){
-		_callback_map[string(on)].Reset(isolate, callback);
+		_callback_map[string(_on)].Reset(isolate, callback);
 	}
-}METHOD_END_ONCALL(on)
+}METHOD_END_ONCALL(_on)
 /* async mode if has(callback),pls use as much as possible, 'coz sync mode might block the nodejs */
 METHOD_START_ONCALL(_call){
 	if(args_len>0){

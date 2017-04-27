@@ -67,6 +67,7 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//for string
 ApiProxyWrapper apiProxyWrapper;
+uv_mutex_t cbLock;//
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -95,7 +96,7 @@ std::string gbk2utf8(const char* in) { return any2utf8(std::string(in),std::stri
 std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::string("big5"),std::string("utf-8")); }
 struct ShareDataOn //for _on()
 {
-	uv_work_t request;//@ref uv_queue_work()
+	uv_work_t request;
 	json j_rt;//the data to send back
 	string strCallback;//the name of the callback
 };
@@ -106,11 +107,14 @@ void after_worker_for_on(uv_work_t * req,int status){
 	v8::HandleScope handle_scope(isolate);
 	ShareDataOn * my_data = static_cast<ShareDataOn *>(req->data);
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->strCallback]);
+	uv_mutex_lock(&cbLock);
 	if(!callback.IsEmpty()){
 		const unsigned argc = 1;
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->j_rt.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
+		//callback.Dispose();
 	}
+	uv_mutex_unlock(&cbLock);
 	delete my_data;
 }
 //conert v8 string to char* (for sptrader api)
@@ -162,10 +166,12 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_on,after_worker_for_on);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SpTraderLogic::SpTraderLogic(void){
+	uv_mutex_init(&cbLock);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 SpTraderLogic::~SpTraderLogic(void){
+	uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
@@ -370,7 +376,7 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ShareDataCall
 {
-	uv_work_t request;//@doc uv_queue_work()
+	uv_work_t request;
 	SpTraderLogic * logic;
 	string api;//the api name
 	json in;
@@ -966,6 +972,9 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::HandleScope handle_scope(isolate);
 	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
+
+	uv_mutex_lock(&cbLock);
+
 	if(!callback.IsEmpty())
 	{
 		const unsigned argc = 1;
@@ -975,6 +984,8 @@ void after_worker_for_call(uv_work_t * req,int status){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
+
+	uv_mutex_unlock(&cbLock);
 	delete my_data;
 }
 #define METHOD_START_ONCALL($methodname)\

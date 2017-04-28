@@ -67,7 +67,7 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//for string
 ApiProxyWrapper apiProxyWrapper;
-//uv_mutex_t cbLock;//
+uv_mutex_t cbLock;//
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -177,12 +177,12 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	uv_async_send(&(req_data->request));
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SpTraderLogic::SpTraderLogic(void){
-	//uv_mutex_init(&cbLock);
+	uv_mutex_init(&cbLock);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 SpTraderLogic::~SpTraderLogic(void){
-	//uv_mutex_destroy(&cbLock);
+	uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
@@ -387,7 +387,8 @@ void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ShareDataCall
 {
-	uv_work_t request;
+	//uv_work_t request;
+	uv_async_t request;
 	SpTraderLogic * logic;
 	string api;//the api name
 	json in;
@@ -950,7 +951,59 @@ std::map<std::string,void(*)(ShareDataCall*my_data)> _apiDict{
 #include <typeinfo>
 #include <stdexcept>
 // NOTES: In this worker thread, you cannot access any V8/node js variables
-void worker_for_call(uv_work_t * req){
+//void worker_for_call(uv_work_t * req){
+//	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
+//	json in=my_data->in;
+//	string api=my_data->api;
+//	json rst;
+//	rst["api"]=api;
+//	rst["in"]=in;
+//	void (*fcnPtr)(ShareDataCall * my_data) = _apiDict[api];
+//	if(NULL!=fcnPtr){
+//		try{
+//			fcnPtr(my_data);
+//		} catch (const std::exception& e) {
+//			// this executes if f() throws std::logic_error (base rule)
+//			rst["STS"]="KO";
+//			rst["errmsg"]=e.what();
+//		} catch (...) {
+//			// this executes if f() throws std::string or int or any other unrelated type
+//			rst["STS"]="KO";
+//			std::exception_ptr p = std::current_exception();
+//			rst["errmsg"]=(p ? p.__cxa_exception_type()->name() : "null");
+//		}
+//	}else{
+//		rst["STS"]="KO";
+//		rst["errmsg"]="not found api:"+api;
+//	}
+//	rst["out"]=my_data->out;
+//	my_data->rst=rst;
+//}
+//void after_worker_for_call(uv_work_t * req,int status){
+//	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+//	v8::HandleScope handle_scope(isolate);
+//	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
+//	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
+//	if(!callback.IsEmpty())
+//	{
+//		const unsigned argc = 1;
+//		json rst=my_data->rst;
+//		rst["rc"]=my_data->rc;
+//		if(0==my_data->rc) rst["STS"]="OK";
+//		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
+//		callback->Call(v8::Null(isolate), argc, argv);
+//	}
+//	delete my_data;
+//}
+void close_cb_call(uv_handle_t* req){
+	//cout << "DEBUG close_cb()" << endl;
+	if(NULL!=req){
+		ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
+		delete my_data;//important to free it
+		//cout << "DEBUG close_cb() DONE" << endl;
+	}
+};
+void after_worker_for_call(uv_async_t * req){
 	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
 	json in=my_data->in;
 	string api=my_data->api;
@@ -977,11 +1030,10 @@ void worker_for_call(uv_work_t * req){
 	}
 	rst["out"]=my_data->out;
 	my_data->rst=rst;
-}
-void after_worker_for_call(uv_work_t * req,int status){
+
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
-	ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
+	//ShareDataCall * my_data = static_cast<ShareDataCall *>(req->data);
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
 	if(!callback.IsEmpty())
 	{
@@ -992,7 +1044,8 @@ void after_worker_for_call(uv_work_t * req,int status){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
-	delete my_data;
+	uv_close((uv_handle_t *) req, close_cb_call);
+	//delete my_data;
 }
 #define METHOD_START_ONCALL($methodname)\
 	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
@@ -1038,11 +1091,13 @@ METHOD_START_ONCALL(_call){
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
-			//NOTES: as the entry is from the js loop already, so no need to do uv_async_send() here for thread-safe, using uv_queue_work is fine enough !
-			uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
+			//uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
+			uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call);
+			uv_async_send(&(req_data->request));
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
-			worker_for_call(& req_data->request);
+			//worker_for_call(& req_data->request);
+			after_worker_for_call(& req_data->request);
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
 						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
 						));

@@ -117,7 +117,7 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//for string
 ApiProxyWrapper apiProxyWrapper;
-uv_mutex_t cbLock;//
+//uv_mutex_t cbLock;//
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -164,7 +164,7 @@ void close_cb(uv_handle_t* req){
 //void after_worker_for_on(uv_work_t * req,int status)
 void after_worker_for_on(uv_async_t * req)
 {
-	uv_mutex_lock(&cbLock);
+	//uv_mutex_lock(&cbLock);
 	//cout << "DEBUG c++ after_worker_for_on..." << endl;
 	ShareDataOn * my_data = static_cast<ShareDataOn *>(req->data);
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
@@ -180,7 +180,7 @@ void after_worker_for_on(uv_async_t * req)
 	uv_close((uv_handle_t *) req, close_cb);
 		//uv_close((uv_handle_t *) req, NULL);
 	//delete my_data;//important to free it
-	uv_mutex_unlock(&cbLock);
+	//uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){

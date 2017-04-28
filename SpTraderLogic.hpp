@@ -110,7 +110,7 @@ void close_cb(uv_handle_t* req){
 	if(NULL!=req){
 		//cout << "DEBUG close_cb 111" << endl;
 		MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-		//cout << "DEBUG close_cb 222" << endl;
+		cout << "DEBUG close_cb 222" << endl;
 		if(NULL!=my_data){
 			string api = my_data->api;
 			delete my_data;//important to free it
@@ -120,7 +120,6 @@ void close_cb(uv_handle_t* req){
 };
 void after_worker_for_on(uv_async_t * req)
 {
-	//uv_mutex_lock(&cbLock);
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
@@ -132,8 +131,9 @@ void after_worker_for_on(uv_async_t * req)
 		//callback.Dispose();
 	}
 	cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
+	uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, close_cb);
-	//uv_mutex_unlock(&cbLock);
+	uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -984,7 +984,7 @@ void after_worker_for_call(uv_async_t * req){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
-	cout << "DEBUG close_cb 000 " << api << endl;
+	//cout << "DEBUG close_cb 000 " << api << endl;
 	uv_close((uv_handle_t *) req, close_cb);
 }
 #define METHOD_START_ONCALL($methodname)\

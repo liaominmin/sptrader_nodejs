@@ -108,11 +108,14 @@ struct MyUvShareData
 };
 void close_cb(uv_handle_t* req){
 	if(NULL!=req){
-		cout << "DEBUG close_cb 111" << endl;
+		//cout << "DEBUG close_cb 111" << endl;
 		MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-		cout << "DEBUG close_cb 222" << endl;
-		delete my_data;//important to free it
-		cout << "DEBUG close_cb 333" << endl;
+		//cout << "DEBUG close_cb 222" << endl;
+		if(NULL!=my_data){
+			string api = my_data->api;
+			delete my_data;//important to free it
+			cout << "DEBUG close_cb 333" << api << endl;
+		}
 	}
 };
 void after_worker_for_on(uv_async_t * req)
@@ -128,7 +131,7 @@ void after_worker_for_on(uv_async_t * req)
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 		//callback.Dispose();
 	}
-	//	if(NULL!=req)
+	cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
 	uv_close((uv_handle_t *) req, close_cb);
 	//uv_mutex_unlock(&cbLock);
 }

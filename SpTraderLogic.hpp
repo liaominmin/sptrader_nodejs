@@ -107,20 +107,20 @@ struct MyUvShareData
 	int rc=-99;
 };
 void close_cb(uv_handle_t* req){
-	cout << "DEBUG close_cb 111" << endl;
+	//cout << "DEBUG close_cb 111" << endl;
 	if(NULL!=req){
 		//uv_mutex_lock(&cbLock);
-		cout << "DEBUG close_cb 112" << endl;
+		//cout << "DEBUG close_cb 112" << endl;
 		MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-		cout << "DEBUG close_cb 222" << endl;
+		//cout << "DEBUG close_cb 222" << endl;
 		if(NULL!=my_data){
 			string api = my_data->api;
 			my_data->out=NULL;
 			my_data->in=NULL;
 			my_data->rst=NULL;
-			cout << "DEBUG close_cb 332" << api << endl;
+			//cout << "DEBUG close_cb 332" << api << endl;
 			delete my_data;//important to free it
-			cout << "DEBUG close_cb 333" << api << endl;
+			//cout << "DEBUG close_cb 333" << api << endl;
 		}
 		//uv_mutex_unlock(&cbLock);
 	}
@@ -137,9 +137,9 @@ void after_worker_for_on(uv_async_t * req)
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 		//callback.Dispose();
 	}
-	cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
+	//cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
 	uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, close_cb);
+	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
 	uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
@@ -991,7 +991,9 @@ void after_worker_for_call(uv_async_t * req){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
-	uv_close((uv_handle_t *) req, close_cb);
+	uv_mutex_lock(&cbLock);
+	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
+	uv_mutex_unlock(&cbLock);
 }
 #define METHOD_START_ONCALL($methodname)\
 	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
@@ -1039,6 +1041,7 @@ METHOD_START_ONCALL(_call){
 			req_data->callback.Reset(isolate, callback);
 			//uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
 			uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call);
+			//uv_async_init(uv_loop_new(), &(req_data->request), after_worker_for_call);//TODO uv_loop_new seems deprecated, https://media.readthedocs.org/pdf/libuv/stable/libuv.pdf
 			uv_async_send(&(req_data->request));
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));

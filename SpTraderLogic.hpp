@@ -67,7 +67,7 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//for string
 ApiProxyWrapper apiProxyWrapper;
-uv_mutex_t cbLock;//
+//uv_mutex_t cbLock;//
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -138,9 +138,9 @@ void after_worker_for_on(uv_async_t * req)
 		//callback.Dispose();
 	}
 	//cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
-	uv_mutex_lock(&cbLock);
+	//uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
-	uv_mutex_unlock(&cbLock);
+	//uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -192,12 +192,12 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	uv_async_send(&(req_data->request));
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SpTraderLogic::SpTraderLogic(void){
-	uv_mutex_init(&cbLock);
+	//uv_mutex_init(&cbLock);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 SpTraderLogic::~SpTraderLogic(void){
-	uv_mutex_destroy(&cbLock);
+	//uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
@@ -1036,9 +1036,9 @@ void after_worker_for_call2(uv_async_t * req){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
-	uv_mutex_lock(&cbLock);
+	//uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
-	uv_mutex_unlock(&cbLock);
+	//uv_mutex_unlock(&cbLock);
 }
 #define METHOD_START_ONCALL($methodname)\
 	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\

@@ -107,15 +107,22 @@ struct MyUvShareData
 	int rc=-99;
 };
 void close_cb(uv_handle_t* req){
+	cout << "DEBUG close_cb 111" << endl;
 	if(NULL!=req){
-		cout << "DEBUG close_cb 111" << endl;
+		uv_mutex_lock(&cbLock);
+		cout << "DEBUG close_cb 112" << endl;
 		MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 		cout << "DEBUG close_cb 222" << endl;
 		if(NULL!=my_data){
 			string api = my_data->api;
+			my_data->out=NULL;
+			my_data->in=NULL;
+			my_data->rst=NULL;
+			cout << "DEBUG close_cb 332" << api << endl;
 			delete my_data;//important to free it
 			cout << "DEBUG close_cb 333" << api << endl;
 		}
+		uv_mutex_unlock(&cbLock);
 	}
 };
 void after_worker_for_on(uv_async_t * req)
@@ -131,9 +138,7 @@ void after_worker_for_on(uv_async_t * req)
 		//callback.Dispose();
 	}
 	cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
-	//uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, close_cb);
-	//uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){

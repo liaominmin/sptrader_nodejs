@@ -951,7 +951,52 @@ std::map<std::string,void(*)(MyUvShareData*my_data)> _apiDict{
 #include <exception>
 #include <typeinfo>
 #include <stdexcept>
-void after_worker_for_call(uv_async_t * req){
+// NOTES: In this worker thread, you cannot access any V8/node js variables
+void worker_for_call(uv_work_t * req){
+	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	json in=my_data->in;
+	string api=my_data->api;
+	json rst;
+	rst["api"]=api;
+	rst["in"]=in;
+	void (*fcnPtr)(MyUvShareData * my_data) = _apiDict[api];
+	if(NULL!=fcnPtr){
+		try{
+			fcnPtr(my_data);
+		} catch (const std::exception& e) {
+			// this executes if f() throws std::logic_error (base rule)
+			rst["STS"]="KO";
+			rst["errmsg"]=e.what();
+		} catch (...) {
+			// this executes if f() throws std::string or int or any other unrelated type
+			rst["STS"]="KO";
+			std::exception_ptr p = std::current_exception();
+			rst["errmsg"]=(p ? p.__cxa_exception_type()->name() : "null");
+		}
+	}else{
+		rst["STS"]="KO";
+		rst["errmsg"]="not found api:"+api;
+	}
+	rst["out"]=my_data->out;
+	my_data->rst=rst;
+}
+void after_worker_for_call(uv_work_t * req,int status){
+	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+	v8::HandleScope handle_scope(isolate);
+	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
+	if(!callback.IsEmpty())
+	{
+		const unsigned argc = 1;
+		json rst=my_data->rst;
+		rst["rc"]=my_data->rc;
+		if(0==my_data->rc) rst["STS"]="OK";
+		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
+		callback->Call(v8::Null(isolate), argc, argv);
+	}
+	delete my_data;
+}
+void after_worker_for_call2(uv_async_t * req){
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	json in=my_data->in;
 	string api=my_data->api;
@@ -1039,14 +1084,15 @@ METHOD_START_ONCALL(_call){
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
+			//TODO uv_queue_work() should be bring back in near future for better API calling in thread pool to speed up....
 			//uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
-			uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call);
-			//uv_async_init(uv_loop_new(), &(req_data->request), after_worker_for_call);//TODO uv_loop_new seems deprecated, https://media.readthedocs.org/pdf/libuv/stable/libuv.pdf
+			uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call2);
+			//uv_async_init(uv_loop_new(), &(req_data->request), after_worker_for_call2);//NOTES uv_loop_new seems deprecated, https://media.readthedocs.org/pdf/libuv/stable/libuv.pdf
 			uv_async_send(&(req_data->request));
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
 			//worker_for_call(& req_data->request);
-			after_worker_for_call(& req_data->request);
+			after_worker_for_call2(& req_data->request);
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
 						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
 						));

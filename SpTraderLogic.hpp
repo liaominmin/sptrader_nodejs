@@ -98,7 +98,6 @@ map<string, v8::Persistent<v8::Function> > _callback_map;
 struct MyUvShareData
 {
 	uv_async_t request;
-	SpTraderLogic * logic;
 	string api;//the api name
 	json in;
 	json out;
@@ -107,24 +106,20 @@ struct MyUvShareData
 	int rc=-99;
 };
 void close_cb(uv_handle_t* req){
-	//cout << "DEBUG close_cb 111" << endl;
 	if(NULL!=req){
-		//uv_mutex_lock(&cbLock);
-		//cout << "DEBUG close_cb 112" << endl;
-		MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-		//cout << "DEBUG close_cb 222" << endl;
-		if(NULL!=my_data){
-			string api = my_data->api;
-			my_data->out=NULL;
-			my_data->in=NULL;
-			my_data->rst=NULL;
-			//cout << "DEBUG close_cb 332" << api << endl;
-			delete my_data;//important to free it
-			//cout << "DEBUG close_cb 333" << api << endl;
+		//cout << "req NOT NULL" << endl;
+		if(NULL!=req->data){
+			//cout << "req->data NOT NULL" << endl;
+			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+			req->data=NULL;//unhook before delete my_data
+			delete my_data;//important to free it here
+		}else{
+			cout << "req->data IS NULL" << endl;
 		}
-		//uv_mutex_unlock(&cbLock);
+	}else{
+		cout << "req LS NULL" << endl;
 	}
-};
+}
 void after_worker_for_on(uv_async_t * req)
 {
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -137,10 +132,7 @@ void after_worker_for_on(uv_async_t * req)
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 		//callback.Dispose();
 	}
-	//cout << "DEBUG on.close_cb 000 " << my_data->api << endl;
-	//uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
-	//uv_mutex_unlock(&cbLock);
+	uv_close((uv_handle_t *) req, close_cb);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -1036,6 +1028,7 @@ void after_worker_for_call2(uv_async_t * req){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
+	//uv_close((uv_handle_t *) req, NULL);
 	//uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
 	//uv_mutex_unlock(&cbLock);

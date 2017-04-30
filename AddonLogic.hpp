@@ -4,11 +4,12 @@
 #include <v8.h>
 #include "ApiProxyWrapperTypes.h"
 #define EXPORT_DECLARE(fff) void fff(const v8::FunctionCallbackInfo<v8::Value>& args);
-class SpTraderLogic : public ApiProxyWrapperReply
+class NODE_MODULE_LOGIC : public ApiProxyWrapperReply
 {
 	public:
-		SpTraderLogic(void);
-		~SpTraderLogic(void);
+		NODE_MODULE_LOGIC(void);
+		~NODE_MODULE_LOGIC(void);
+
 		ITR(EXPORT_DECLARE,EXPAND(NODE_MODULE_FUNC_LIST));//declare the module methods iterally:
 		//0
 		virtual void OnTest();
@@ -184,24 +185,24 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_on);\
 	uv_async_send(&(req_data->request));
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-SpTraderLogic::SpTraderLogic(void){
+NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	//uv_mutex_init(&cbLock);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
-SpTraderLogic::~SpTraderLogic(void){
+NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
 	//uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
 //0
-void SpTraderLogic::OnTest()
+void NODE_MODULE_LOGIC::OnTest()
 {
 	json j;
 	ASYNC_CALLBACK_FOR_ON(Test,j);
 }
 //1
-void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
+void NODE_MODULE_LOGIC::OnLoginReply(long ret_code,char *ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
@@ -211,7 +212,7 @@ void SpTraderLogic::OnLoginReply(long ret_code,char *ret_msg)
 	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
 }
 //2
-void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
+void NODE_MODULE_LOGIC::OnPswChangeReply(long ret_code, char *ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
@@ -220,7 +221,7 @@ void SpTraderLogic::OnPswChangeReply(long ret_code, char *ret_msg)
 	ASYNC_CALLBACK_FOR_ON(ApiTickerUpdate,j);
 }
 //3
-void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
+void NODE_MODULE_LOGIC::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
 {
 	json j;
 	j["action"]=action;
@@ -231,7 +232,7 @@ void SpTraderLogic::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *or
 	ASYNC_CALLBACK_FOR_ON(OrderRequestFailed,j);
 }
 //4
-void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
+void NODE_MODULE_LOGIC::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=0;
@@ -239,7 +240,7 @@ void SpTraderLogic::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 	ASYNC_CALLBACK_FOR_ON(OrderBeforeSendReport,j);
 }
 //5 SPAPI_RegisterMMOrderRequestFailed
-void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
+void NODE_MODULE_LOGIC::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
 {
 	json j;
 	j["err_code"]=err_code;
@@ -249,14 +250,14 @@ void SpTraderLogic::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_c
 	ASYNC_CALLBACK_FOR_ON(MMOrderRequestFailed,j);
 }
 //6
-void SpTraderLogic::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
+void NODE_MODULE_LOGIC::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 {
 	json j;
 	if(NULL!=mm_order) COPY_TO_JSON(SPApiMMOrder,(*mm_order),j["mm_order"]);
 	ASYNC_CALLBACK_FOR_ON(MMOrderBeforeSendReport,j);
 }
 //7.SPAPI_RegisterQuoteRequestReceivedReport
-void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
+void NODE_MODULE_LOGIC::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
 {
 	json j;
 	j["product_code"]=product_code;
@@ -266,35 +267,35 @@ void SpTraderLogic::OnApiQuoteRequestReceived(char *product_code, char buy_sell,
 	ASYNC_CALLBACK_FOR_ON(QuoteRequestReceived,j);
 }
 //8
-void SpTraderLogic::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
+void NODE_MODULE_LOGIC::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 {
 	json j;
 	if(NULL!=trade) COPY_TO_JSON(SPApiTrade,(*trade),j["trade"]);
 	ASYNC_CALLBACK_FOR_ON(TradeReport,j);
 }
 //9
-void SpTraderLogic::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
+void NODE_MODULE_LOGIC::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
 {
 	json j;
 	if(NULL!=trade) COPY_TO_JSON(SPApiTrade,(*trade),j["trade"]);
 	ASYNC_CALLBACK_FOR_ON(LoadTradeReadyPush,j);
 }
 //10
-void SpTraderLogic::OnApiPriceUpdate(const SPApiPrice *price)
+void NODE_MODULE_LOGIC::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
 	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
 	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
 }
 //11
-void SpTraderLogic::OnApiTickerUpdate(const SPApiTicker *ticker)
+void NODE_MODULE_LOGIC::OnApiTickerUpdate(const SPApiTicker *ticker)
 {
 	json j;
 	if(NULL!=ticker) COPY_TO_JSON(SPApiTicker,(*ticker),j["ticker"]);
 	ASYNC_CALLBACK_FOR_ON(TickerUpdate,j);
 }
 //12
-void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
+void NODE_MODULE_LOGIC::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 {
 	json j;
 	j["rec_no"]=rec_no;
@@ -302,7 +303,7 @@ void SpTraderLogic::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 	ASYNC_CALLBACK_FOR_ON(OrderReport,j);
 }
 //13
-void SpTraderLogic::OnInstrumentListReply(bool is_ready, char *ret_msg)
+void NODE_MODULE_LOGIC::OnInstrumentListReply(bool is_ready, char *ret_msg)
 {
 	printf("\nInstrument Ready:%s. Ret Msg:%s\n",is_ready?"Ok":"No", ret_msg);
 	json j;
@@ -312,14 +313,14 @@ void SpTraderLogic::OnInstrumentListReply(bool is_ready, char *ret_msg)
 	ASYNC_CALLBACK_FOR_ON(InstrumentListReply,j);
 }
 //14
-void SpTraderLogic::OnBusinessDateReply(long business_date)
+void NODE_MODULE_LOGIC::OnBusinessDateReply(long business_date)
 {
 	json j;
 	j["business_date"]=business_date;
 	ASYNC_CALLBACK_FOR_ON(BusinessDateReply,j);
 }
 //15
-void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
+void NODE_MODULE_LOGIC::OnConnectedReply(long host_type, long conn_status)
 {
 	json j;
 	j["host_type"]=host_type;
@@ -327,7 +328,7 @@ void SpTraderLogic::OnConnectedReply(long host_type, long conn_status)
 	ASYNC_CALLBACK_FOR_ON(ConnectedReply,j);
 }
 //16
-void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
+void NODE_MODULE_LOGIC::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
 {
 	json j;
 	j["accNo"]=accNo;
@@ -337,7 +338,7 @@ void SpTraderLogic::OnAccountLoginReply(char *accNo, long ret_code, char* ret_ms
 	ASYNC_CALLBACK_FOR_ON(AccountLoginReply,j);
 }
 //17
-void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
+void NODE_MODULE_LOGIC::OnAccountLogoutReply(long ret_code, char* ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
@@ -345,35 +346,35 @@ void SpTraderLogic::OnAccountLogoutReply(long ret_code, char* ret_msg)
 	ASYNC_CALLBACK_FOR_ON(AccountLogoutReply,j);
 }
 //18
-void SpTraderLogic::OnAccountInfoPush(const SPApiAccInfo *acc_info)
+void NODE_MODULE_LOGIC::OnAccountInfoPush(const SPApiAccInfo *acc_info)
 {
 	json j;
 	if(NULL!=acc_info) COPY_TO_JSON(SPApiAccInfo,(*acc_info),j["acc_info"]);
 	ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
 }
 //19
-void SpTraderLogic::OnAccountPositionPush(const SPApiPos *pos)
+void NODE_MODULE_LOGIC::OnAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
 	if(NULL!=pos) COPY_TO_JSON(SPApiPos,(*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(AccountPositionPush,j);
 }
 //20
-void SpTraderLogic::OnUpdatedAccountPositionPush(const SPApiPos *pos)
+void NODE_MODULE_LOGIC::OnUpdatedAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
 	if(NULL!=pos) COPY_TO_JSON(SPApiPos,(*pos),j["pos"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountPositionPush,j);
 }
 //21
-void SpTraderLogic::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
+void NODE_MODULE_LOGIC::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 {
 	json j;
 	if(NULL!=acc_bal) COPY_TO_JSON(SPApiAccBal,(*acc_bal),j["acc_bal"]);
 	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
 }
 //22
-void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
+void NODE_MODULE_LOGIC::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
 {
 	json j;
 	j["inst_code"]=inst_code;
@@ -384,7 +385,7 @@ void SpTraderLogic::OnProductListByCodeReply(char *inst_code, bool is_ready, cha
 	ASYNC_CALLBACK_FOR_ON(ProductListByCodeReply,j);
 }
 //23
-void SpTraderLogic::OnApiAccountControlReply(long ret_code, char *ret_msg)
+void NODE_MODULE_LOGIC::OnApiAccountControlReply(long ret_code, char *ret_msg)
 {
 	json j;
 	j["ret_code"]=ret_code;
@@ -1035,7 +1036,7 @@ void after_worker_for_call2(uv_async_t * req){
 	//uv_mutex_unlock(&cbLock);
 }
 #define METHOD_START_ONCALL($methodname)\
-	void SpTraderLogic::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
+	void NODE_MODULE_LOGIC::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
 		int args_len=args.Length();\
 		v8::Isolate* isolate = args.GetIsolate();\
 		v8::Local<v8::Object> rt=  v8::Object::New(isolate);\

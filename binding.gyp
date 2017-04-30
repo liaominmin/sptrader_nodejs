@@ -1,6 +1,6 @@
 {
 	'targets': [{
-		"target_name":"SpTrader" ,'sources': [ 'SpTrader.cc','SpTraderLogic.hpp' ]
+		"target_name":"SpTrader" ,'sources': [ 'Addon.cc','AddonLogic.hpp' ]
 			,"include_dirs": [ "include" ]
 			,'libraries': ['-L.','-lapiwrapper']
 

@@ -85,3 +85,24 @@
 #define MCAT8(_1, _2, _3, _4, _5, _6,_7,_8) CAT(MCAT5(_1,_2,_3,_4,_5,_6),_7)
 #define MCAT9(_1, _2, _3, _4, _5, _6,_7,_8,_9) CAT(MCAT5(_1,_2,_3,_4,_5,_6,_7),_8)
 
+
+#define COPY_V8_TO_STR(aaa,kkk)\
+	v8::Local<v8::String> in_##kkk = v8::Local<v8::String>::Cast(aaa);\
+	char kkk[255]={0};\
+	V8ToCharPtr(in_##kkk,kkk);
+#define COPY_TO_INT(aaa,kkk)\
+	int kkk=0;\
+	if(aaa.is_number_integer()){ kkk=aaa; }
+#define COPY_TO_LNG(aaa,kkk)\
+	long kkk=0;\
+	if(aaa.is_number_integer()){ kkk=aaa; }
+#define COPY_TO_DBL(aaa,kkk)\
+	double kkk=0;\
+	if(aaa.is_number_float()){ kkk=aaa; }
+#define COPY_TO_STR(aaa,kkk)\
+	char kkk[255]={0};\
+	if(aaa.is_string()){\
+		string str_in_##kkk=aaa;\
+		strcpy(kkk,str_in_##kkk.c_str());\
+	}
+

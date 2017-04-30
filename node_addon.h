@@ -25,7 +25,8 @@
 #ifdef NODE_MODULE_NAME
 
 //include {$NODE_MODULE_NAME}Login.hpp:
-#include LOGICFILE(NODE_MODULE_NAME)
+//#include LOGICFILE(NODE_MODULE_NAME)
+#include LOGICFILE(Addon)
 
 #define NODE_MODULE_LOGIC CAT(NODE_MODULE_NAME,Logic)
 //bind method list to "exports"(nodejs module inner thing)

@@ -132,7 +132,8 @@ void after_worker_for_on(uv_async_t * req)
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 		//callback.Dispose();
 	}
-	uv_close((uv_handle_t *) req, close_cb);
+	uv_close((uv_handle_t *) req, NULL);
+	//uv_close((uv_handle_t *) req, close_cb);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -1028,9 +1029,9 @@ void after_worker_for_call2(uv_async_t * req){
 		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
-	//uv_close((uv_handle_t *) req, NULL);
+	uv_close((uv_handle_t *) req, NULL);
 	//uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
+	//uv_close((uv_handle_t *) req, close_cb);//uv_close is not thread safe...
 	//uv_mutex_unlock(&cbLock);
 }
 #define METHOD_START_ONCALL($methodname)\

@@ -98,17 +98,10 @@ std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::stri
 map<string, v8::Persistent<v8::Function> > _callback_map;
 struct MyUvShareData
 {
-	uv_async_t request;
-	string api;//the api name
-	json in;
-	json out;
-	json rst;
-	v8::Persistent<v8::Function> callback;
-	int rc=-99;
-};
-struct MyUvShareDataWork
-{
-	uv_work_t request;
+	union {
+		uv_work_t request_work;
+		uv_async_t request_async;
+	};
 	string api;//the api name
 	json in;
 	json out;
@@ -190,11 +183,11 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	MyUvShareData * req_data = new MyUvShareData;\
 	req_data->api=string(#$callbackName);\
-	req_data->request.data = req_data;\
+	req_data->request_async.data = req_data;\
 	req_data->out=$jsonData;\
 	uv_mutex_lock(&cbLock);\
-	uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_on);\
-	uv_async_send(&(req_data->request));\
+	uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on);\
+	uv_async_send(&(req_data->request_async));\
 	uv_mutex_unlock(&cbLock);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
@@ -406,14 +399,14 @@ void NODE_MODULE_LOGIC::OnApiAccountControlReply(long ret_code, char *ret_msg)
 	ASYNC_CALLBACK_FOR_ON(AccountControlReply,j);
 }
 //1.3
-inline void SPAPI_SetLanguageId(MyUvShareDataWork * my_data){
+inline void SPAPI_SetLanguageId(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_INT(in["langid"],langid);
 	apiProxyWrapper.SPAPI_SetLanguageId(langid);
 	my_data->rc =0;
 }
 //1.4
-inline void SPAPI_SetLoginInfo(MyUvShareDataWork * my_data){
+inline void SPAPI_SetLoginInfo(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["host"],host);
 	COPY_TO_INT(in["port"],port);
@@ -425,17 +418,17 @@ inline void SPAPI_SetLoginInfo(MyUvShareDataWork * my_data){
 	my_data->rc =0;
 }
 //1.5
-inline void SPAPI_Login(MyUvShareDataWork * my_data){
+inline void SPAPI_Login(MyUvShareData * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_Login();
 }
 //1.6
-inline void SPAPI_Logout(MyUvShareDataWork * my_data){
+inline void SPAPI_Logout(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_Logout(user_id);
 }
 //1.7
-inline void SPAPI_ChangePassword(MyUvShareDataWork * my_data){
+inline void SPAPI_ChangePassword(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["old_psw"],old_psw);
@@ -443,14 +436,14 @@ inline void SPAPI_ChangePassword(MyUvShareDataWork * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_ChangePassword(user_id,old_psw,new_psw);
 }
 //1.8
-inline void SPAPI_GetLoginStatus(MyUvShareDataWork * my_data){
+inline void SPAPI_GetLoginStatus(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_INT(in["host_id"],host_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetLoginStatus(user_id,host_id);
 }
 //1.9
-inline void SPAPI_AddOrder(MyUvShareDataWork * my_data){
+inline void SPAPI_AddOrder(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_AddOrder(&order);
@@ -461,7 +454,7 @@ inline void SPAPI_AddOrder(MyUvShareDataWork * my_data){
 	}
 }
 //1.10
-inline void SPAPI_AddInactiveOrder(MyUvShareDataWork * my_data){
+inline void SPAPI_AddInactiveOrder(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STRUCT(SPApiOrder,in["order"],order);
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_AddInactiveOrder(&order);
@@ -472,7 +465,7 @@ inline void SPAPI_AddInactiveOrder(MyUvShareDataWork * my_data){
 	}
 }
 //1.11
-inline void SPAPI_ChangeOrder(MyUvShareDataWork * my_data){
+inline void SPAPI_ChangeOrder(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_DBL(in["org_price"],org_price);
@@ -486,7 +479,7 @@ inline void SPAPI_ChangeOrder(MyUvShareDataWork * my_data){
 	}
 }
 //1.12
-inline void SPAPI_ChangeOrderBy(MyUvShareDataWork * my_data){
+inline void SPAPI_ChangeOrderBy(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -498,7 +491,7 @@ inline void SPAPI_ChangeOrderBy(MyUvShareDataWork * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_ChangeOrderBy(user_id,acc_no,accOrderNo,org_price,org_qty,newPrice,newQty);
 }
 //1.13
-inline void SPAPI_GetOrderByOrderNo(MyUvShareDataWork * my_data){
+inline void SPAPI_GetOrderByOrderNo(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -513,14 +506,14 @@ inline void SPAPI_GetOrderByOrderNo(MyUvShareDataWork * my_data){
 	}
 }
 //1.14
-inline void SPAPI_GetOrderCount(MyUvShareDataWork * my_data){
+inline void SPAPI_GetOrderCount(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	my_data->rc = apiProxyWrapper.SPAPI_GetOrderCount(user_id,acc_no);
 }
 //1.15
-inline void SPAPI_GetActiveOrders(MyUvShareDataWork * my_data){
+inline void SPAPI_GetActiveOrders(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -536,7 +529,7 @@ inline void SPAPI_GetActiveOrders(MyUvShareDataWork * my_data){
 	}
 }
 //1.16 Just Example which don't use! 
-//inline void SPAPI_GetOrdersByArray(MyUvShareDataWork * my_data){
+//inline void SPAPI_GetOrdersByArray(MyUvShareData * my_data){
 //	json in=my_data->in;
 //	COPY_TO_STR(in["user_id"],user_id);
 //	COPY_TO_STR(in["acc_no"],acc_no);
@@ -555,7 +548,7 @@ inline void SPAPI_GetActiveOrders(MyUvShareDataWork * my_data){
 //	}
 //}
 //1.17
-inline void SPAPI_DeleteOrderBy(MyUvShareDataWork * my_data){
+inline void SPAPI_DeleteOrderBy(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -565,14 +558,14 @@ inline void SPAPI_DeleteOrderBy(MyUvShareDataWork * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_DeleteOrderBy(user_id,acc_no,accOrderNo,productCode,clOrderId);
 }
 //1.18
-inline void SPAPI_DeleteAllOrders(MyUvShareDataWork * my_data){
+inline void SPAPI_DeleteAllOrders(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	my_data->rc = apiProxyWrapper.SPAPI_DeleteAllOrders(user_id,acc_no);
 }
 //1.19
-inline void SPAPI_ActivateOrderBy(MyUvShareDataWork * my_data){
+inline void SPAPI_ActivateOrderBy(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -580,14 +573,14 @@ inline void SPAPI_ActivateOrderBy(MyUvShareDataWork * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_ActivateOrderBy(user_id,acc_no,accOrderNo);
 }
 //1.20
-inline void SPAPI_ActivateAllOrders(MyUvShareDataWork * my_data){
+inline void SPAPI_ActivateAllOrders(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	my_data->rc = apiProxyWrapper.SPAPI_ActivateAllOrders(user_id,acc_no);
 }
 //1.21
-inline void SPAPI_InactivateOrderBy(MyUvShareDataWork * my_data){
+inline void SPAPI_InactivateOrderBy(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -595,14 +588,14 @@ inline void SPAPI_InactivateOrderBy(MyUvShareDataWork * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_InactivateOrderBy(user_id,acc_no,accOrderNo);
 }
 //1.22
-inline void SPAPI_InactivateAllOrders(MyUvShareDataWork * my_data){
+inline void SPAPI_InactivateAllOrders(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	my_data->rc = apiProxyWrapper.SPAPI_InactivateAllOrders(user_id,acc_no);
 }
 //1.23
-inline void SPAPI_SendMarketMakingOrder(MyUvShareDataWork * my_data){
+inline void SPAPI_SendMarketMakingOrder(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STRUCT(SPApiMMOrder,in["mmorder"],mmorder);
@@ -614,13 +607,13 @@ inline void SPAPI_SendMarketMakingOrder(MyUvShareDataWork * my_data){
 	}
 }
 //1.24
-inline void SPAPI_GetPosCount(MyUvShareDataWork * my_data){
+inline void SPAPI_GetPosCount(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetPosCount(user_id);
 }
 //1.25
-inline void SPAPI_GetAllPos(MyUvShareDataWork * my_data){
+inline void SPAPI_GetAllPos(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	vector<SPApiPos> apiPosList;
@@ -634,7 +627,7 @@ inline void SPAPI_GetAllPos(MyUvShareDataWork * my_data){
 	}
 }
 //1.27
-inline void SPAPI_GetPosByProduct(MyUvShareDataWork * my_data){
+inline void SPAPI_GetPosByProduct(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
@@ -647,14 +640,14 @@ inline void SPAPI_GetPosByProduct(MyUvShareDataWork * my_data){
 	}
 }
 //1.28
-inline void SPAPI_GetTradeCount(MyUvShareDataWork * my_data){
+inline void SPAPI_GetTradeCount(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	my_data->rc = apiProxyWrapper.SPAPI_GetTradeCount(user_id,acc_no);
 }
 //1.29
-inline void SPAPI_GetAllTrades(MyUvShareDataWork * my_data){
+inline void SPAPI_GetAllTrades(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -669,7 +662,7 @@ inline void SPAPI_GetAllTrades(MyUvShareDataWork * my_data){
 	}
 }
 //1.31
-inline void SPAPI_SubscribePrice(MyUvShareDataWork * my_data){
+inline void SPAPI_SubscribePrice(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
@@ -677,7 +670,7 @@ inline void SPAPI_SubscribePrice(MyUvShareDataWork * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_SubscribePrice(user_id,prod_code,mode);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 }
 //1.32
-inline void SPAPI_GetPriceByCode(MyUvShareDataWork * my_data){
+inline void SPAPI_GetPriceByCode(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
@@ -690,15 +683,15 @@ inline void SPAPI_GetPriceByCode(MyUvShareDataWork * my_data){
 	}
 }
 //1.33
-inline void SPAPI_LoadInstrumentList(MyUvShareDataWork * my_data){
+inline void SPAPI_LoadInstrumentList(MyUvShareData * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_LoadInstrumentList();
 }
 //1.34
-inline void SPAPI_GetInstrumentCount(MyUvShareDataWork * my_data){
+inline void SPAPI_GetInstrumentCount(MyUvShareData * my_data){
 	my_data->rc = apiProxyWrapper.SPAPI_GetInstrumentCount();
 }
 //1.35
-inline void SPAPI_GetInstrument(MyUvShareDataWork * my_data){
+inline void SPAPI_GetInstrument(MyUvShareData * my_data){
 	json in=my_data->in;
 	vector<SPApiInstrument> apiInstList;
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetInstrument(apiInstList);
@@ -711,7 +704,7 @@ inline void SPAPI_GetInstrument(MyUvShareDataWork * my_data){
 	}
 }
 //1.37
-inline void SPAPI_GetInstrumentByCode(MyUvShareDataWork * my_data){
+inline void SPAPI_GetInstrumentByCode(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["inst_code"],inst_code);
 	SPApiInstrument inst={0};
@@ -723,12 +716,12 @@ inline void SPAPI_GetInstrumentByCode(MyUvShareDataWork * my_data){
 	}
 }
 //1.38
-inline void SPAPI_GetProductCount(MyUvShareDataWork * my_data){
+inline void SPAPI_GetProductCount(MyUvShareData * my_data){
 	json in=my_data->in;
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetProductCount();
 }
 //1.39
-inline void SPAPI_GetProduct(MyUvShareDataWork * my_data){
+inline void SPAPI_GetProduct(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["inst_code"],inst_code);
 	vector<SPApiProduct> apiProdList;
@@ -742,7 +735,7 @@ inline void SPAPI_GetProduct(MyUvShareDataWork * my_data){
 	}
 }
 //1.41
-inline void SPAPI_GetProductByCode(MyUvShareDataWork * my_data){
+inline void SPAPI_GetProductByCode(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["prod_code"],prod_code);
 	SPApiProduct prod={0};
@@ -754,13 +747,13 @@ inline void SPAPI_GetProductByCode(MyUvShareDataWork * my_data){
 	}
 }
 //1.42
-inline void SPAPI_GetAccBalCount(MyUvShareDataWork * my_data){
+inline void SPAPI_GetAccBalCount(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	my_data->rc = apiProxyWrapper.SPAPI_GetAccBalCount(user_id);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
 }
 //1.43
-inline void SPAPI_GetAllAccBal(MyUvShareDataWork * my_data){
+inline void SPAPI_GetAllAccBal(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	vector<SPApiAccBal> apiAccBalList;
@@ -774,7 +767,7 @@ inline void SPAPI_GetAllAccBal(MyUvShareDataWork * my_data){
 	}
 }
 //1.45
-inline void SPAPI_GetAccBalByCurrency(MyUvShareDataWork * my_data){
+inline void SPAPI_GetAccBalByCurrency(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["ccy"],ccy);
@@ -787,7 +780,7 @@ inline void SPAPI_GetAccBalByCurrency(MyUvShareDataWork * my_data){
 	}
 }
 //1.46
-inline void SPAPI_SubscribeTicker(MyUvShareDataWork * my_data){
+inline void SPAPI_SubscribeTicker(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
@@ -795,7 +788,7 @@ inline void SPAPI_SubscribeTicker(MyUvShareDataWork * my_data){
 	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeTicker(user_id, prod_code, mode);
 }
 //1.47
-inline void SPAPI_SubscribeQuoteRequest(MyUvShareDataWork * my_data){
+inline void SPAPI_SubscribeQuoteRequest(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
@@ -803,14 +796,14 @@ inline void SPAPI_SubscribeQuoteRequest(MyUvShareDataWork * my_data){
 	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeQuoteRequest(user_id, prod_code, mode);
 }
 //1.48
-inline void SPAPI_SubscribeAllQuoteRequest(MyUvShareDataWork * my_data){
+inline void SPAPI_SubscribeAllQuoteRequest(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_INT(in["mode"],mode);
 	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeAllQuoteRequest(user_id, mode);
 }
 //1.49
-inline void SPAPI_GetAccInfo(MyUvShareDataWork * my_data){
+inline void SPAPI_GetAccInfo(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	SPApiAccInfo acc_info={0};
@@ -822,7 +815,7 @@ inline void SPAPI_GetAccInfo(MyUvShareDataWork * my_data){
 	}
 }
 //1.50
-inline void SPAPI_GetDllVersion(MyUvShareDataWork * my_data){
+inline void SPAPI_GetDllVersion(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["ver_no"],ver_no);
 	COPY_TO_STR(in["rel_no"],rel_no);
@@ -835,19 +828,19 @@ inline void SPAPI_GetDllVersion(MyUvShareDataWork * my_data){
 	my_data->out=out;
 }
 //1.51
-inline void SPAPI_LoadProductInfoListByCode(MyUvShareDataWork * my_data){
+inline void SPAPI_LoadProductInfoListByCode(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["inst_code"],inst_code);
 	my_data->rc = apiProxyWrapper.SPAPI_LoadProductInfoListByCode(inst_code);
 }
 //1.52
-inline void SPAPI_SetApiLogPath(MyUvShareDataWork * my_data){
+inline void SPAPI_SetApiLogPath(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["path"],path);
 	my_data->rc = apiProxyWrapper.SPAPI_SetApiLogPath(path);
 }
 //1.53
-inline void SPAPI_GetCcyRateByCcy(MyUvShareDataWork * my_data){
+inline void SPAPI_GetCcyRateByCcy(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["ccy"],ccy);
@@ -860,21 +853,21 @@ inline void SPAPI_GetCcyRateByCcy(MyUvShareDataWork * my_data){
 	}
 }
 //1.54
-inline void SPAPI_AccountLogin(MyUvShareDataWork * my_data){
+inline void SPAPI_AccountLogin(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_AccountLogin(user_id,acc_no);
 }
 //1.55
-inline void SPAPI_AccountLogout(MyUvShareDataWork * my_data){
+inline void SPAPI_AccountLogout(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_AccountLogout(user_id,acc_no);
 }
 //1.56
-inline void SPAPI_SendAccControl(MyUvShareDataWork * my_data){
+inline void SPAPI_SendAccControl(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
@@ -883,7 +876,7 @@ inline void SPAPI_SendAccControl(MyUvShareDataWork * my_data){
 	int rc = my_data->rc = apiProxyWrapper.SPAPI_SendAccControl(user_id,acc_no,ctrl_mask,ctrl_level);
 }
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
-std::map<std::string,void(*)(MyUvShareDataWork*my_data)> _apiDict{
+std::map<std::string,void(*)(MyUvShareData*my_data)> _apiDict{
 	ITR(DFN_FNC_PTR,EXPAND( //API 20161216:
 				//SPAPI_Initialize,//1.1 ignore
 				//SPAPI_Uninitialize,//1.2 ignore
@@ -959,13 +952,13 @@ std::map<std::string,void(*)(MyUvShareDataWork*my_data)> _apiDict{
 #include <stdexcept>
 // NOTES: In this worker thread, you cannot access any V8/node js variables
 void worker_for_call(uv_work_t * req){
-	MyUvShareDataWork * my_data = static_cast<MyUvShareDataWork *>(req->data);
+	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	json in=my_data->in;
 	string api=my_data->api;
 	json rst;
 	rst["api"]=api;
 	rst["in"]=in;
-	void (*fcnPtr)(MyUvShareDataWork * my_data) = _apiDict[api];
+	void (*fcnPtr)(MyUvShareData * my_data) = _apiDict[api];
 	if(NULL!=fcnPtr){
 		try{
 			fcnPtr(my_data);
@@ -989,7 +982,7 @@ void worker_for_call(uv_work_t * req){
 void after_worker_for_call(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
-	MyUvShareDataWork * my_data = static_cast<MyUvShareDataWork *>(req->data);
+	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
 	if(!callback.IsEmpty())
 	{
@@ -1086,21 +1079,21 @@ METHOD_START_ONCALL(_call){
 	if(args_len>0){
 		COPY_V8_TO_STR(args[0],_call);
 		//MyUvShareData * req_data = new MyUvShareData;
-		MyUvShareDataWork * req_data = new MyUvShareDataWork;
-		req_data->request.data = req_data;
+		MyUvShareData * req_data = new MyUvShareData;
+		req_data->request_work.data = req_data;
 		req_data->api=string(_call);
 		req_data->in=json::parse(json_stringify(isolate,in));
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
 			//TODO uv_queue_work() should be bring back in near future for better API calling in thread pool to speed up....
-			uv_queue_work(uv_default_loop(),&(req_data->request),worker_for_call,after_worker_for_call);
+			uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_call,after_worker_for_call);
 			//uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call2);
 			//uv_async_init(uv_loop_new(), &(req_data->request), after_worker_for_call2);//NOTES uv_loop_new seems deprecated, https://media.readthedocs.org/pdf/libuv/stable/libuv.pdf
 			//uv_async_send(&(req_data->request));
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
-			worker_for_call(& req_data->request);
+			worker_for_call(& req_data->request_work);
 			//after_worker_for_call2(& req_data->request);
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
 						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())

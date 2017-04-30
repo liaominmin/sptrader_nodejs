@@ -3,3 +3,4 @@ node-v7.8.0
 Log
 product
 *.log
+node_modules/nan

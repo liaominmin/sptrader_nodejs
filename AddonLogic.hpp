@@ -130,14 +130,12 @@ void after_worker_for_on(uv_async_t * req)
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
+	const unsigned argc = 1;
+	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
+	uv_close((uv_handle_t *) req, close_cb);
 	if(!callback.IsEmpty()){
-		const unsigned argc = 1;
-		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
-		//callback.Dispose();
 	}
-	uv_close((uv_handle_t *) req, NULL);
-	//uv_close((uv_handle_t *) req, close_cb);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -185,10 +183,8 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	req_data->api=string(#$callbackName);\
 	req_data->request_async.data = req_data;\
 	req_data->out=$jsonData;\
-	uv_mutex_lock(&cbLock);\
 	uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on);\
 	uv_async_send(&(req_data->request_async));\
-	uv_mutex_unlock(&cbLock);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	uv_mutex_init(&cbLock);

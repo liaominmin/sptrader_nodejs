@@ -982,17 +982,17 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::HandleScope handle_scope(isolate);
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
-	if(!callback.IsEmpty())
-	{
-		const unsigned argc = 1;
-		json rst=my_data->rst;
-		rst["rc"]=my_data->rc;
-		if(0==my_data->rc) rst["STS"]="OK";
-		v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
-		callback->Call(v8::Null(isolate), argc, argv);
-	}
+	const unsigned argc = 1;
+	json rst=my_data->rst;
+	rst["rc"]=my_data->rc;
+	if(0==my_data->rc) rst["STS"]="OK";
+	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 	req->data=NULL;//unhook before delete my_data
 	delete my_data;
+	if(!callback.IsEmpty())
+	{
+		callback->Call(v8::Null(isolate), argc, argv);
+	}
 }
 //void after_worker_for_call2(uv_async_t * req){
 //	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);

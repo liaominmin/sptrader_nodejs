@@ -109,21 +109,21 @@ struct MyUvShareData
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
-void close_cb(uv_handle_t* req){
-	if(NULL!=req){
-		//cout << "req NOT NULL" << endl;
-		if(NULL!=req->data){
-			//cout << "req->data NOT NULL" << endl;
-			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-			req->data=NULL;//unhook before delete my_data
-			delete my_data;//important to free it here
-		}else{
-			cout << "req->data IS NULL" << endl;
-		}
-	}else{
-		cout << "req LS NULL" << endl;
-	}
-}
+//void close_cb(uv_handle_t* req){
+//	if(NULL!=req){
+//		//cout << "req NOT NULL" << endl;
+//		if(NULL!=req->data){
+//			//cout << "req->data NOT NULL" << endl;
+//			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+//			req->data=NULL;//unhook before delete my_data
+//			delete my_data;//important to free it here
+//		}else{
+//			cout << "req->data IS NULL" << endl;
+//		}
+//	}else{
+//		cout << "req LS NULL" << endl;
+//	}
+//}
 void after_worker_for_on(uv_async_t * req)
 {
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -132,7 +132,9 @@ void after_worker_for_on(uv_async_t * req)
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
 	const unsigned argc = 1;
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
-	uv_close((uv_handle_t *) req, close_cb);
+	uv_mutex_lock(&cbLock);
+	uv_close((uv_handle_t *) req, NULL);
+	uv_mutex_unlock(&cbLock);
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 	}

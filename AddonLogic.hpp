@@ -299,8 +299,10 @@ void NODE_MODULE_LOGIC::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *t
 void NODE_MODULE_LOGIC::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
+	cout << "TO";
 	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
-	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
+	cout << "DO" << endl;
+	//ASYNC_CALLBACK_FOR_ON(PriceReport,j);
 }
 //11
 void NODE_MODULE_LOGIC::OnApiTickerUpdate(const SPApiTicker *ticker)

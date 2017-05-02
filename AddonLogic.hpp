@@ -109,21 +109,26 @@ struct MyUvShareData
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
-//void close_cb(uv_handle_t* req){
-//	if(NULL!=req){
-//		//cout << "req NOT NULL" << endl;
-//		if(NULL!=req->data){
-//			//cout << "req->data NOT NULL" << endl;
-//			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-//			req->data=NULL;//unhook before delete my_data
-//			delete my_data;//important to free it here
-//		}else{
-//			cout << "req->data IS NULL" << endl;
-//		}
-//	}else{
-//		cout << "req LS NULL" << endl;
-//	}
-//}
+void close_cb(uv_handle_t* req){
+	/*
+	if(NULL!=req){
+		//cout << "req NOT NULL" << endl;
+		if(NULL!=req->data){
+			//uv_mutex_lock(&cbLock);
+			//cout << "req->data NOT NULL" << endl;
+			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+			req->data=NULL;//unhook before delete my_data
+			delete my_data;//important to free it here
+			//uv_mutex_unlock(&cbLock);
+		}else{
+			cout << "req->data IS NULL" << endl;
+		}
+	}else{
+		cout << "req LS NULL" << endl;
+	}
+	*/
+	//delete req;
+}
 void after_worker_for_on(uv_async_t * req)
 {
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -132,12 +137,15 @@ void after_worker_for_on(uv_async_t * req)
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
 	const unsigned argc = 1;
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
-	uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, NULL);
-	uv_mutex_unlock(&cbLock);
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 	}
+	//req->data=NULL;//unhook before delete my_data
+	//uv_mutex_lock(&cbLock);
+	uv_close((uv_handle_t *) req, NULL);
+	//uv_close((uv_handle_t *) req, close_cb);
+	//delete my_data;//important to free it here
+	//uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -185,8 +193,10 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	req_data->api=string(#$callbackName);\
 	req_data->request_async.data = req_data;\
 	req_data->out=$jsonData;\
+	uv_mutex_lock(&cbLock);\
 	uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on);\
 	uv_async_send(&(req_data->request_async));\
+	uv_mutex_unlock(&cbLock);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	uv_mutex_init(&cbLock);

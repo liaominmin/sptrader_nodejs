@@ -103,6 +103,7 @@ struct MyUvShareData
 		uv_async_t request_async;
 	};
 	string api;//the api name
+	string out_s;
 	json in;
 	json out;
 	json rst;
@@ -136,10 +137,12 @@ void after_worker_for_on(uv_async_t * req)
 	v8::HandleScope handle_scope(isolate);
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
 	const unsigned argc = 1;
-	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
+	//v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
+	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 	}
+	//my_data->out=NULL;
 	//req->data=NULL;//unhook before delete my_data
 	//uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, NULL);
@@ -188,15 +191,14 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
+//req_data->out=$jsonData;
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	MyUvShareData * req_data = new MyUvShareData;\
 	req_data->api=string(#$callbackName);\
+	req_data->out_s=$jsonData.dump();\
 	req_data->request_async.data = req_data;\
-	req_data->out=$jsonData;\
-	uv_mutex_lock(&cbLock);\
 	uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on);\
-	uv_async_send(&(req_data->request_async));\
-	uv_mutex_unlock(&cbLock);
+	uv_async_send(&(req_data->request_async));
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	uv_mutex_init(&cbLock);
@@ -297,10 +299,8 @@ void NODE_MODULE_LOGIC::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *t
 void NODE_MODULE_LOGIC::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
-	cout << "O";
 	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
-	cout << "K" << endl;
-	//ASYNC_CALLBACK_FOR_ON(PriceReport,j);
+	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
 }
 //11
 void NODE_MODULE_LOGIC::OnApiTickerUpdate(const SPApiTicker *ticker)
@@ -987,6 +987,8 @@ void worker_for_call(uv_work_t * req){
 		rst["errmsg"]="not found api:"+api;
 	}
 	rst["out"]=my_data->out;
+	my_data->out_s=my_data->out.dump();
+	my_data->out=NULL;
 	my_data->rst=rst;
 }
 void after_worker_for_call(uv_work_t * req,int status){
@@ -999,7 +1001,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 	rst["rc"]=my_data->rc;
 	if(0==my_data->rc) rst["STS"]="OK";
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
-	req->data=NULL;//unhook before delete my_data
+	//req->data=NULL;//unhook before delete my_data
 	delete my_data;
 	if(!callback.IsEmpty())
 	{
@@ -1088,7 +1090,6 @@ METHOD_START_ONCALL(_on){
 METHOD_START_ONCALL(_call){
 	if(args_len>0){
 		COPY_V8_TO_STR(args[0],_call);
-		//MyUvShareData * req_data = new MyUvShareData;
 		MyUvShareData * req_data = new MyUvShareData;
 		req_data->request_work.data = req_data;
 		req_data->api=string(_call);
@@ -1096,22 +1097,28 @@ METHOD_START_ONCALL(_call){
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
-			//TODO uv_queue_work() should be bring back in near future for better API calling in thread pool to speed up....
 			uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_call,after_worker_for_call);
+
 			//uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call2);
 			//uv_async_init(uv_loop_new(), &(req_data->request), after_worker_for_call2);//NOTES uv_loop_new seems deprecated, https://media.readthedocs.org/pdf/libuv/stable/libuv.pdf
 			//uv_async_send(&(req_data->request));
+
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
 			worker_for_call(& req_data->request_work);
+
 			//after_worker_for_call2(& req_data->request);
+
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
-						v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
+						//v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
+						v8::String::NewFromUtf8(isolate,req_data->out_s.c_str())
 						));
 			rc=req_data->rc;
 			if(0==rc){
 				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"OK"));
 			}
+
+			delete req_data;
 		}
 		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,_call));
 	}

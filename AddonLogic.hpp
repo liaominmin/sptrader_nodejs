@@ -135,6 +135,7 @@ struct MyUvShareData
 //	//delete req;
 //	cout << "EAN" << endl;
 //}
+static int after_work_cb_count;
 void worker_for_on(uv_work_t * req){
 }
 void after_worker_for_on(uv_work_t * req,int status)
@@ -152,6 +153,7 @@ void after_worker_for_on(uv_work_t * req,int status)
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 	}
+	after_work_cb_count--;
 }
 void after_worker_for_on2(uv_async_t * req)
 {
@@ -223,7 +225,11 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	req_data->api=string(#$callbackName);\
 	req_data->out_s=$jsonData.dump();\
 	req_data->request_work.data = req_data;\
-	uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);\
+	cout << #$callbackName <<"("<< after_work_cb_count << ")" << endl ;\
+	if (after_work_cb_count<100 ){\
+		after_work_cb_count++;\
+		uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);\
+	}\
 	$jsonData=NULL;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){

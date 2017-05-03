@@ -111,6 +111,10 @@ struct MyUvShareData
 	int rc=-99;
 };
 void close_cb(uv_handle_t* req){
+	cout << "CL" ;
+	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	//req->data=NULL;//unhook before delete my_data
+	delete my_data;//important to free it here
 	/*
 	if(NULL!=req){
 		//cout << "req NOT NULL" << endl;
@@ -129,9 +133,11 @@ void close_cb(uv_handle_t* req){
 	}
 	*/
 	//delete req;
+	cout << "EAN" << endl;
 }
 void after_worker_for_on(uv_async_t * req)
 {
+	//cout << "O1";
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
@@ -139,14 +145,20 @@ void after_worker_for_on(uv_async_t * req)
 	const unsigned argc = 1;
 	//v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
+	//my_data->out_s=NULL;
+	//(*my_data).request_async=NULL;//unhook
+	//delete my_data;
 	if(!callback.IsEmpty()){
+		//cout << "O2";
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
+		//cout << "O3";
 	}
+	//my_data->in=NULL;
 	//my_data->out=NULL;
-	//req->data=NULL;//unhook before delete my_data
 	//uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, NULL);
 	//uv_close((uv_handle_t *) req, close_cb);
+	//req->data=NULL;//unhook so that uv_close is safe...?
+	uv_close((uv_handle_t *) req, NULL);
 	//delete my_data;//important to free it here
 	//uv_mutex_unlock(&cbLock);
 }
@@ -198,7 +210,8 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	req_data->out_s=$jsonData.dump();\
 	req_data->request_async.data = req_data;\
 	uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on);\
-	uv_async_send(&(req_data->request_async));
+	uv_async_send(&(req_data->request_async));\
+	$jsonData=NULL;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	uv_mutex_init(&cbLock);
@@ -299,10 +312,10 @@ void NODE_MODULE_LOGIC::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *t
 void NODE_MODULE_LOGIC::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
-	cout << "TO";
+	//cout << "TO";
 	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
-	cout << "DO" << endl;
-	//ASYNC_CALLBACK_FOR_ON(PriceReport,j);
+	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
+	//cout << "DO" << endl;
 }
 //11
 void NODE_MODULE_LOGIC::OnApiTickerUpdate(const SPApiTicker *ticker)
@@ -1112,14 +1125,12 @@ METHOD_START_ONCALL(_call){
 			//after_worker_for_call2(& req_data->request);
 
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
-						//v8::String::NewFromUtf8(isolate,req_data->rst["out"].dump().c_str())
 						v8::String::NewFromUtf8(isolate,req_data->out_s.c_str())
 						));
 			rc=req_data->rc;
 			if(0==rc){
 				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"OK"));
 			}
-
 			delete req_data;
 		}
 		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,_call));

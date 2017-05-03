@@ -135,7 +135,25 @@ struct MyUvShareData
 //	//delete req;
 //	cout << "EAN" << endl;
 //}
-static int after_work_cb_count=0;
+//static int after_work_cb_count=0;
+#include <atomic>
+
+std::atomic<int> after_work_cb_count(0);
+//struct AtomicCounter {
+//    std::atomic<int> value;
+//
+//    void increment(){
+//        ++value;
+//    }
+//
+//    void decrement(){
+//        --value;
+//    }
+//
+//    int get(){
+//        return value.load();
+//    }
+//};
 void worker_for_on(uv_work_t * req){
 }
 void after_worker_for_on(uv_work_t * req,int status)

@@ -135,7 +135,7 @@ struct MyUvShareData
 //	//delete req;
 //	cout << "EAN" << endl;
 //}
-static int after_work_cb_count;
+static int after_work_cb_count=0;
 void worker_for_on(uv_work_t * req){
 }
 void after_worker_for_on(uv_work_t * req,int status)
@@ -157,20 +157,15 @@ void after_worker_for_on(uv_work_t * req,int status)
 }
 void after_worker_for_on2(uv_async_t * req)
 {
-	//cout << "O1";
+	after_work_cb_count--;
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
 	const unsigned argc = 1;
-	//v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out.dump().c_str()))};
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
-	//my_data->out_s=NULL;
-	//(*my_data).request_async=NULL;//unhook
 	if(!callback.IsEmpty()){
-		//cout << "O2";
-		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
-		//cout << "O3";
+		callback->Call(v8::Null(isolate), argc, argv);
 	}
 	uv_close((uv_handle_t *) req, NULL);
 }
@@ -215,22 +210,29 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
-//req_data->out=$jsonData;
-//req_data->request_async.data = req_data;
-//uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on2);
-//uv_async_send(&(req_data->request_async));
-//cout << #$callbackName << endl;
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	MyUvShareData * req_data = new MyUvShareData;\
 	req_data->api=string(#$callbackName);\
 	req_data->out_s=$jsonData.dump();\
-	req_data->request_work.data = req_data;\
+	$jsonData=NULL;\
+	req_data->request_async.data = req_data;\
 	cout << #$callbackName <<"("<< after_work_cb_count << ")" << endl ;\
 	if (after_work_cb_count<100 ){\
 		after_work_cb_count++;\
-		uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);\
-	}\
-	$jsonData=NULL;
+		uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on2);\
+		uv_async_send(&(req_data->request_async));\
+	}
+//#define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
+//	MyUvShareData * req_data = new MyUvShareData;\
+//	req_data->api=string(#$callbackName);\
+//	req_data->out_s=$jsonData.dump();\
+//	req_data->request_work.data = req_data;\
+//	cout << #$callbackName <<"("<< after_work_cb_count << ")" << endl ;\
+//	if (after_work_cb_count<100 ){\
+//		after_work_cb_count++;\
+//		uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);\
+//	}\
+//	$jsonData=NULL;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	//uv_mutex_init(&cbLock);

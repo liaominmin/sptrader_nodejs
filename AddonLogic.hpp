@@ -158,7 +158,6 @@ void worker_for_on(uv_work_t * req){
 }
 void after_worker_for_on(uv_work_t * req,int status)
 {
-	after_work_cb_count--;
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
@@ -172,11 +171,13 @@ void after_worker_for_on(uv_work_t * req,int status)
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 	}
+	after_work_cb_count--;
 }
 void after_worker_for_on2(uv_async_t * req)
 {
-	after_work_cb_count--;
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	/*
+	after_work_cb_count--;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
@@ -185,6 +186,13 @@ void after_worker_for_on2(uv_async_t * req)
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
+	*/
+	MyUvShareData * req_data = new MyUvShareData;
+	req_data->api=my_data->api;
+	req_data->out_s=my_data->out_s;
+	req_data->request_work.data = req_data;
+	uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);
+
 	uv_close((uv_handle_t *) req, NULL);
 }
 //conert v8 string to char* (for sptrader api)
@@ -236,7 +244,7 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	req_data->request_async.data = req_data;\
 	cout << #$callbackName <<"("<< after_work_cb_count << ")" << endl ;\
 	if (after_work_cb_count<100 ){\
-		after_work_cb_count++;\
+		++after_work_cb_count;\
 		uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on2);\
 		uv_async_send(&(req_data->request_async));\
 	}
@@ -1046,7 +1054,6 @@ void worker_for_call(uv_work_t * req){
 	my_data->rst=rst;
 }
 void after_worker_for_call(uv_work_t * req,int status){
-	after_work_cb_count--;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -1063,6 +1070,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 	{
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
+	after_work_cb_count--;
 }
 //void after_worker_for_call2(uv_async_t * req){
 //	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);

@@ -24,7 +24,7 @@
 //		string str_in_##kkk=aaa;\
 //		strcpy(kkk,str_in_##kkk.c_str());\
 //	}
-#define COPY_STF(sss,ttt,fff) ttt[#fff]=sss.fff;
+#define COPY_STF(sss,ttt,fff) try{ttt[#fff]=sss.fff;}catch(...){ cout << "COPY_STF ERRORKO "<< #fff << "=" << sss.fff << endl;}
 #define COPY_TO_STF_VAL(sss,ttt,fff) if(!sss[#fff].is_null())ttt.fff=sss[#fff];
 #define COPY_TO_STF_STR(sss,ttt,fff) if(!sss[#fff].is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
 //#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())try{ttt.fff,sss[#fff].get<char>();}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].get<char>() <<endl;}

@@ -260,7 +260,11 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	MyUvShareData * req_data = new MyUvShareData;\
 	req_data->api=string(#$callbackName);\
 	req_data->out_s=$jsonData.dump();\
-	cout << #$callbackName <<"("<< after_work_cb_count << ")" << endl ;\
+	cout << #$callbackName <<"("<< after_work_cb_count ;\
+	if(after_work_cb_count>60){\
+		cout << "!!!!!";\
+	}\
+	cout << ")" << endl ;\
 	if (after_work_cb_count<100 ){\
 		++after_work_cb_count;\
 		uv_work_t *pWorker = new uv_work_t();\

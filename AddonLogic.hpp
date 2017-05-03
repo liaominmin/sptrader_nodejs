@@ -140,6 +140,7 @@ void worker_for_on(uv_work_t * req){
 }
 void after_worker_for_on(uv_work_t * req,int status)
 {
+	after_work_cb_count--;
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
@@ -153,7 +154,6 @@ void after_worker_for_on(uv_work_t * req,int status)
 	if(!callback.IsEmpty()){
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 	}
-	after_work_cb_count--;
 }
 void after_worker_for_on2(uv_async_t * req)
 {
@@ -1026,6 +1026,7 @@ void worker_for_call(uv_work_t * req){
 	my_data->rst=rst;
 }
 void after_worker_for_call(uv_work_t * req,int status){
+	after_work_cb_count--;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -1132,6 +1133,7 @@ METHOD_START_ONCALL(_call){
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
+			after_work_cb_count++;
 			uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_call,after_worker_for_call);
 
 			//uv_async_init(uv_default_loop(), &(req_data->request), after_worker_for_call2);

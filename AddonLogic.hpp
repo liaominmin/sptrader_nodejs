@@ -68,7 +68,7 @@ using json = nlohmann::json;
 #include <map>
 using namespace std;//for string
 ApiProxyWrapper apiProxyWrapper;
-uv_mutex_t cbLock;//
+//uv_mutex_t cbLock;//
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -110,32 +110,50 @@ struct MyUvShareData
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
-void close_cb(uv_handle_t* req){
-	cout << "CL" ;
-	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-	//req->data=NULL;//unhook before delete my_data
-	delete my_data;//important to free it here
-	/*
-	if(NULL!=req){
-		//cout << "req NOT NULL" << endl;
-		if(NULL!=req->data){
-			//uv_mutex_lock(&cbLock);
-			//cout << "req->data NOT NULL" << endl;
-			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-			req->data=NULL;//unhook before delete my_data
-			delete my_data;//important to free it here
-			//uv_mutex_unlock(&cbLock);
-		}else{
-			cout << "req->data IS NULL" << endl;
-		}
-	}else{
-		cout << "req LS NULL" << endl;
-	}
-	*/
-	//delete req;
-	cout << "EAN" << endl;
+//void close_cb(uv_handle_t* req){
+//	cout << "CL" ;
+//	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+//	//req->data=NULL;//unhook before delete my_data
+//	delete my_data;//important to free it here
+//	/*
+//	if(NULL!=req){
+//		//cout << "req NOT NULL" << endl;
+//		if(NULL!=req->data){
+//			//uv_mutex_lock(&cbLock);
+//			//cout << "req->data NOT NULL" << endl;
+//			MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+//			req->data=NULL;//unhook before delete my_data
+//			delete my_data;//important to free it here
+//			//uv_mutex_unlock(&cbLock);
+//		}else{
+//			cout << "req->data IS NULL" << endl;
+//		}
+//	}else{
+//		cout << "req LS NULL" << endl;
+//	}
+//	*/
+//	//delete req;
+//	cout << "EAN" << endl;
+//}
+void worker_for_on(uv_work_t * req){
 }
-void after_worker_for_on(uv_async_t * req)
+void after_worker_for_on(uv_work_t * req,int status)
+{
+	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+	v8::HandleScope handle_scope(isolate);
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
+	const unsigned argc = 1;
+	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
+	//cout << my_data->out_s << endl;
+	my_data->out_s = "";//clear it manually
+	req->data=NULL;//unhook before delete my_data
+	delete my_data;
+	if(!callback.IsEmpty()){
+		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
+	}
+}
+void after_worker_for_on2(uv_async_t * req)
 {
 	//cout << "O1";
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -147,20 +165,12 @@ void after_worker_for_on(uv_async_t * req)
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
 	//my_data->out_s=NULL;
 	//(*my_data).request_async=NULL;//unhook
-	//delete my_data;
 	if(!callback.IsEmpty()){
 		//cout << "O2";
 		callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 		//cout << "O3";
 	}
-	//my_data->in=NULL;
-	//my_data->out=NULL;
-	//uv_mutex_lock(&cbLock);
-	//uv_close((uv_handle_t *) req, close_cb);
-	//req->data=NULL;//unhook so that uv_close is safe...?
 	uv_close((uv_handle_t *) req, NULL);
-	//delete my_data;//important to free it here
-	//uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -204,22 +214,25 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	return scope.Escape(result);
 }
 //req_data->out=$jsonData;
+//req_data->request_async.data = req_data;
+//uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on2);
+//uv_async_send(&(req_data->request_async));
+//cout << #$callbackName << endl;
 #define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
 	MyUvShareData * req_data = new MyUvShareData;\
 	req_data->api=string(#$callbackName);\
 	req_data->out_s=$jsonData.dump();\
-	req_data->request_async.data = req_data;\
-	uv_async_init(uv_default_loop(), &(req_data->request_async), after_worker_for_on);\
-	uv_async_send(&(req_data->request_async));\
+	req_data->request_work.data = req_data;\
+	uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);\
 	$jsonData=NULL;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
-	uv_mutex_init(&cbLock);
+	//uv_mutex_init(&cbLock);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
-	uv_mutex_destroy(&cbLock);
+	//uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
@@ -1016,7 +1029,8 @@ void after_worker_for_call(uv_work_t * req,int status){
 	rst["rc"]=my_data->rc;
 	if(0==my_data->rc) rst["STS"]="OK";
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
-	//req->data=NULL;//unhook before delete my_data
+	req->data=NULL;//unhook before delete my_data
+	my_data->rst=NULL;
 	delete my_data;
 	if(!callback.IsEmpty())
 	{
@@ -1131,7 +1145,7 @@ METHOD_START_ONCALL(_call){
 			if(0==rc){
 				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"OK"));
 			}
-			delete req_data;
+			//delete req_data;
 		}
 		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,_call));
 	}

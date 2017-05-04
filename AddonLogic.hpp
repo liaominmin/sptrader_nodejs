@@ -184,7 +184,7 @@ void after_worker_for_on(uv_work_t * req,int status)
 }
 void after_worker_for_on2(uv_async_t * req)
 {
-	//cout << "11";
+	cout << "11";
 	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	MyUvShareData * my_data = (MyUvShareData *) req->data;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
@@ -192,6 +192,11 @@ void after_worker_for_on2(uv_async_t * req)
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
 	const unsigned argc = 1;
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
+
+	my_data->out_s = "";//clear it manually first...
+	req->data=NULL;//unhook before delete my_data
+	delete my_data;
+
 	if(!callback.IsEmpty()){
 		cout << "22";
 		callback->Call(v8::Null(isolate), argc, argv);
@@ -203,12 +208,8 @@ void after_worker_for_on2(uv_async_t * req)
 	//req_data->request_work.data = req_data;
 	//uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);
 
-	my_data->out_s = "";//clear it manually first...
-	req->data=NULL;//unhook before delete my_data
-	delete my_data;
-
-	//uv_close((uv_handle_t *) req, NULL);
-	uv_close((uv_handle_t *) req, close_cb);//will delete req inside close_cb()
+	uv_close((uv_handle_t *) req, NULL);
+	//uv_close((uv_handle_t *) req, close_cb);//will delete req inside close_cb()
 
 	after_work_cb_count--;
 }

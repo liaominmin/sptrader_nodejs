@@ -139,10 +139,10 @@ void close_cb2(uv_handle_t* req){
 //	//delete req;
 //	cout << "EAN" << endl;
 //}
-//static int after_work_cb_count=0;
+//static int seq_count=0;
 #include <atomic>
 
-std::atomic<int> after_work_cb_count(0);
+std::atomic<int> seq_count(0);
 //struct AtomicCounter {
 //    std::atomic<int> value;
 //
@@ -181,7 +181,6 @@ void worker_for_on(uv_work_t * req){
 //		//callback->Call(v8::Null(isolate), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 //		callback->Call(isolate->GetCurrentContext()->Global(), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 //	}
-//	after_work_cb_count--;
 //}
 void after_worker_for_on2(uv_async_t * req)
 {
@@ -209,10 +208,8 @@ void after_worker_for_on2(uv_async_t * req)
 	//req_data->request_work.data = req_data;
 	//uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);
 
-	//uv_close((uv_handle_t *) req, NULL);
-	uv_close((uv_handle_t *) req, close_cb2);//will delete req inside close_cb()
-
-	after_work_cb_count--;
+	uv_close((uv_handle_t *) req, NULL);
+	//uv_close((uv_handle_t *) req, close_cb2);//will delete req inside close_cb()
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -261,18 +258,15 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	req_data->api=string(#$callbackName);\
 	req_data->out_s=$jsonData.dump();\
 	$jsonData=NULL;\
-	cout << #$callbackName <<"("<< after_work_cb_count ;\
-	if(after_work_cb_count>60){\
-		cout << "!!!!!";\
-	}\
+	req_data->seq=(++seq_count);\
+	int seq=req_data->seq;\
+	cout << #$callbackName <<"("<< seq;\
 	cout << ")" << endl ;\
-	if (after_work_cb_count<100 ){\
-		req_data->seq=(++after_work_cb_count);\
-		uv_async_t *req = new uv_async_t();\
-		req->data=(void*)req_data;\
-		uv_async_init(uv_default_loop(), req, after_worker_for_on2);\
-		uv_async_send(req);\
-	}
+	uv_async_t *req = new uv_async_t();\
+	req->data=(void*)req_data;\
+	cout << req_data->seq << "-000" << endl;\
+	uv_async_init(uv_default_loop(), req, after_worker_for_on2);\
+	uv_async_send(req);\
 
 //req_data->request_work.data = req_data;
 
@@ -281,18 +275,18 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 //	MyUvShareData * req_data = new MyUvShareData;\
 //	req_data->api=string(#$callbackName);\
 //	req_data->out_s=$jsonData.dump();\
-//	cout << #$callbackName <<"("<< after_work_cb_count ;\
-//	if(after_work_cb_count>60){\
+//	cout << #$callbackName <<"("<< seq_count ;\
+//	if(seq_count>60){\
 //		cout << "!!!!!";\
 //	}\
 //	cout << ")" << endl ;\
-//	if (after_work_cb_count<100 ){\
-//		++after_work_cb_count;\
+//	if (seq_count<100 ){\
+//		++seq_count;\
 //		uv_work_t *pWorker = new uv_work_t();\
 //		pWorker->data=(void*)req_data;\
 //		uv_queue_work(uv_default_loop(),pWorker,worker_for_on,after_worker_for_on);\
 //	}else{\
-//		--after_work_cb_count;\
+//		--seq_count;\
 //	}\
 //	$jsonData=NULL;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1107,7 +1101,6 @@ void after_worker_for_call(uv_work_t * req,int status){
 	{
 		callback->Call(v8::Null(isolate), argc, argv);
 	}
-	after_work_cb_count--;
 }
 //void after_worker_for_call2(uv_async_t * req){
 //	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
@@ -1198,9 +1191,10 @@ METHOD_START_ONCALL(_call){
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
 			req_data->callback.Reset(isolate, callback);
-			req_data->seq=(++after_work_cb_count);
+			req_data->seq=(++seq_count);
 			uv_work_t *req= new uv_work_t();
 			req->data=(void*)req_data;
+			cout << req_data->seq << "-001" << endl;
 			uv_queue_work(uv_default_loop(),req,worker_for_call,after_worker_for_call);
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));

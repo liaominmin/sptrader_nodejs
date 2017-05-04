@@ -184,12 +184,22 @@ void worker_for_on(uv_work_t * req){
 //}
 void after_worker_for_on2(uv_async_t * req)
 {
+	cout << "after_worker_for_on2" <<endl;
 	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	MyUvShareData * my_data = (MyUvShareData *) req->data;
 	cout << my_data->seq << "-111" <<endl;
+	//if("PriceReport"==my_data->api){
+	//	cout << my_data->seq << "-DBG" <<endl;
+	//	req->data=NULL;
+	//	delete my_data;
+	//	uv_close((uv_handle_t *) req, close_cb2);
+	//	return;
+	//}
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
-	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);
+	//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);//will cause error when GC ?
+	my_data->callback.Reset(isolate, _callback_map[my_data->api]);
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
 	const unsigned argc = 1;
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
 
@@ -209,6 +219,7 @@ void after_worker_for_on2(uv_async_t * req)
 	//uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);
 
 	uv_close((uv_handle_t *) req, NULL);
+	cout << my_data->seq << "-444" <<endl;
 	//uv_close((uv_handle_t *) req, close_cb2);//will delete req inside close_cb()
 }
 //conert v8 string to char* (for sptrader api)
@@ -1087,7 +1098,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-	v8::Local<v8::Function> callback=	v8::Local<v8::Function>::New(isolate, my_data->callback);
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
 	const unsigned argc = 1;
 	json rst=my_data->rst;
 	rst["rc"]=my_data->rc;
@@ -1190,7 +1201,7 @@ METHOD_START_ONCALL(_call){
 		req_data->in=json::parse(json_stringify(isolate,in));
 		if(!callback.IsEmpty()){//ASYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"ASYNC"));
-			req_data->callback.Reset(isolate, callback);
+			req_data->callback.Reset(isolate, callback);//important
 			req_data->seq=(++seq_count);
 			uv_work_t *req= new uv_work_t();
 			req->data=(void*)req_data;

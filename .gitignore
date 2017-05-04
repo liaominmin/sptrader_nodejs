@@ -6,3 +6,4 @@ product
 node_modules/nan
 core
 tmp
+node_modules/nodejs-websocket

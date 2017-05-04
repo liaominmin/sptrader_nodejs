@@ -189,13 +189,13 @@ void after_worker_for_on2(uv_async_t * req)
 	MyUvShareData * my_data = (MyUvShareData *) req->data;
 	cout << my_data->seq << "-111" <<endl;
 	//TEST:
-	if("PriceReport"==my_data->api){
-		cout << my_data->seq << "-SKIP" <<endl;
-		req->data=NULL;
-		delete my_data;
-		uv_close((uv_handle_t *) req, close_cb2);
-		return;
-	}
+	//if("PriceReport"==my_data->api){
+	//	cout << my_data->seq << "-SKIP" <<endl;
+	//	req->data=NULL;
+	//	delete my_data;
+	//	uv_close((uv_handle_t *) req, close_cb2);
+	//	return;
+	//}
 
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
@@ -402,10 +402,11 @@ void NODE_MODULE_LOGIC::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *t
 void NODE_MODULE_LOGIC::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
-	//cout << "TO";
+	cout << "TO";
 	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
-	ASYNC_CALLBACK_FOR_ON(PriceReport,j);
-	//cout << "DO" << endl;
+	//ASYNC_CALLBACK_FOR_ON(PriceReport,j);
+	j=NULL;//
+	cout << "DO" << endl;
 }
 //11
 void NODE_MODULE_LOGIC::OnApiTickerUpdate(const SPApiTicker *ticker)

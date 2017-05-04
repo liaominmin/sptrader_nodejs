@@ -4,3 +4,4 @@ Log
 product
 *.log
 node_modules/nan
+core

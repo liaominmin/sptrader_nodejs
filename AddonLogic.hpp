@@ -66,7 +66,38 @@ class NODE_MODULE_LOGIC : public ApiProxyWrapperReply
 using json = nlohmann::json;
 #include <iostream> //for cout << .... << endl
 #include <map>
+#include <queue>
+#include <mutex>
+#include <climits> //for INT_MAX
 using namespace std;//for string
+
+template<typename T>
+class mutex_queue
+{
+	private:
+		std::queue<T> m_queque;
+		mutable std::mutex m_mutex;
+
+	public:
+		void push( const T value )
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_queque.push(value);
+		}
+
+		T pop()
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			T rt;
+			if(!m_queque.empty()){
+				rt = m_queque.front();
+				m_queque.pop();
+			}
+			return rt;
+		}
+};
+
+static mutex_queue<json> _callback_queue;
 ApiProxyWrapper apiProxyWrapper;
 //uv_mutex_t cbLock;//
 #include <iconv.h> //for gbk/big5/utf8
@@ -96,6 +127,10 @@ std::string any2utf8(std::string in,std::string fromEncode,std::string toEncode)
 std::string gbk2utf8(const char* in) { return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8")); }
 std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::string("big5"),std::string("utf-8")); }
 map<string, v8::Persistent<v8::Function> > _callback_map;
+struct MyUvShareDataOn
+{
+	int seq=-99;
+};
 struct MyUvShareData
 {
 	union {
@@ -111,8 +146,8 @@ struct MyUvShareData
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
-void close_cb2(uv_handle_t* req){
-	delete req;
+void close_cb_q(uv_handle_t* req){
+	if(NULL!=req) free(req);
 }
 //void close_cb(uv_handle_t* req){
 //	cout << "CL" ;
@@ -182,48 +217,88 @@ void worker_for_on(uv_work_t * req){
 //		callback->Call(isolate->GetCurrentContext()->Global(), argc, argv);//NOTES: REMEMBER do a setTimeout() at the JS in case the hook blocking/killing people!!!
 //	}
 //}
-void after_worker_for_on2(uv_async_t * req)
+void after_worker_for_on_q(uv_async_t * req)
 {
-	cout << "after_worker_for_on2" <<endl;
-	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-	MyUvShareData * my_data = (MyUvShareData *) req->data;
-	cout << my_data->seq << "-111" <<endl;
-	//TEST:
-	//if("PriceReport"==my_data->api){
-	//	cout << my_data->seq << "-SKIP" <<endl;
-	//	req->data=NULL;
-	//	delete my_data;
-	//	uv_close((uv_handle_t *) req, close_cb2);
-	//	return;
-	//}
-
+	MyUvShareDataOn * my_data = (MyUvShareDataOn *) req->data;
+	int seq = my_data->seq;
+	cout << seq << "[" << endl;
+	bool f_continue=false;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
-	//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);//will cause error when GC ?
-	my_data->callback.Reset(isolate, _callback_map[my_data->api]);
-	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
-	const unsigned argc = 1;
-	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
-
-	my_data->out_s = "";//clear it manually first...
-	req->data=NULL;//unhook before delete my_data
-	delete my_data;
-
-	if(!callback.IsEmpty()){
-		cout << my_data->seq << "-222" <<endl;
-		callback->Call(v8::Null(isolate), argc, argv);
-	}
-	cout << my_data->seq << "-333" <<endl;
-	//MyUvShareData * req_data = new MyUvShareData;
-	//req_data->api=my_data->api;
-	//req_data->out_s=my_data->out_s;
-	//req_data->request_work.data = req_data;
-	//uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);
-
-	uv_close((uv_handle_t *) req, NULL);
-	cout << my_data->seq << "-444" <<endl;
-	//uv_close((uv_handle_t *) req, close_cb2);//will delete req inside close_cb()
+	do{
+		//cout << "222" << endl;
+		json qi=_callback_queue.pop();
+		f_continue=qi.is_null() ? false: true;
+		//if(f_continue){
+		//	cout << "333 continue" << endl;
+		//}else{
+		//	cout << "333 no continue" << endl;
+		//}
+		if(f_continue){
+			cout << qi.dump() << endl;
+			string api=qi["on"];
+			json data=qi["data"];
+			//cout << "555" << endl;
+			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_map[api]);
+			const unsigned argc = 1;
+			//cout << "666" << endl;
+			v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()))};
+			if(!callback.IsEmpty()){
+				//cout << "777" << endl;
+				callback->Call(v8::Null(isolate), argc, argv);
+			}
+			//cout << "888" << endl;
+		}
+		qi=NULL;//delete
+	}while(f_continue);
+	//cout << "999" << endl;
+	req->data=NULL;
+	free(my_data);
+	cout << seq << "]" << endl;
+	uv_close((uv_handle_t *) req, close_cb_q);
 }
+//void after_worker_for_on2(uv_async_t * req)
+//{
+//	cout << "after_worker_for_on2" <<endl;
+//	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+//	MyUvShareData * my_data = (MyUvShareData *) req->data;
+//	cout << my_data->seq << "-111" <<endl;
+//	//TEST:
+//	//if("PriceReport"==my_data->api){
+//	//	cout << my_data->seq << "-SKIP" <<endl;
+//	//	req->data=NULL;
+//	//	delete my_data;
+//	//	uv_close((uv_handle_t *) req, close_cb2);
+//	//	return;
+//	//}
+//
+//	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+//	v8::HandleScope handle_scope(isolate);
+//	//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate,_callback_map[my_data->api]);//will cause error when GC ?
+//	my_data->callback.Reset(isolate, _callback_map[my_data->api]);
+//	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
+//	const unsigned argc = 1;
+//	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,my_data->out_s.c_str()))};
+//
+//	my_data->out_s = "";//clear it manually first...
+//	req->data=NULL;//unhook before delete my_data
+//	delete my_data;
+//
+//	if(!callback.IsEmpty()){
+//		cout << my_data->seq << "-222" <<endl;
+//		callback->Call(v8::Null(isolate), argc, argv);
+//	}
+//	cout << my_data->seq << "-333" <<endl;
+//	//MyUvShareData * req_data = new MyUvShareData;
+//	//req_data->api=my_data->api;
+//	//req_data->out_s=my_data->out_s;
+//	//req_data->request_work.data = req_data;
+//	//uv_queue_work(uv_default_loop(),&(req_data->request_work),worker_for_on,after_worker_for_on);
+//
+//	uv_close((uv_handle_t *) req, NULL);
+//	cout << my_data->seq << "-444" <<endl;
+//	//uv_close((uv_handle_t *) req, close_cb2);//will delete req inside close_cb()
+//}
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
 	const v8::String::Utf8Value value(v8v);
@@ -266,20 +341,36 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	return scope.Escape(result);
 }
 
-#define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
-	MyUvShareData * req_data = new MyUvShareData;\
-	req_data->api=string(#$callbackName);\
-	req_data->out_s=$jsonData.dump();\
+#define ASYNC_CALLBACK_FOR_ON_Q($callbackName,$jsonData)\
+	MyUvShareDataOn *data = (MyUvShareDataOn *)malloc(sizeof(MyUvShareDataOn));\
+	data->seq=(++seq_count);\
+	if(data->seq > INT_MAX - 1000) seq_count=0;\
+	json qi;\
+	qi["on"]=#$callbackName;\
+	qi["data"]=$jsonData;\
+	qi["seq"]=data->seq;\
+	_callback_queue.push(qi);\
+	qi=NULL;\
 	$jsonData=NULL;\
-	req_data->seq=(++seq_count);\
-	int seq=req_data->seq;\
-	cout << #$callbackName <<"("<< seq;\
-	cout << ")" << endl ;\
-	uv_async_t *req = new uv_async_t();\
-	req->data=(void*)req_data;\
-	cout << req_data->seq << "-000" << endl;\
-	uv_async_init(uv_default_loop(), req, after_worker_for_on2);\
-	uv_async_send(req);\
+	uv_async_t *req = (uv_async_t *) malloc(sizeof(uv_async_t));\
+	req->data=data;\
+	uv_async_init(uv_default_loop(), req, after_worker_for_on_q);\
+	uv_async_send(req);
+
+//#define ASYNC_CALLBACK_FOR_ON($callbackName,$jsonData)\
+//	MyUvShareData * req_data = new MyUvShareData;\
+//	req_data->api=string(#$callbackName);\
+//	req_data->out_s=$jsonData.dump();\
+//	$jsonData=NULL;\
+//	req_data->seq=(++seq_count);\
+//	int seq=req_data->seq;\
+//	cout << #$callbackName <<"("<< seq;\
+//	cout << ")" << endl ;\
+//	uv_async_t *req = new uv_async_t();\
+//	req->data=(void*)req_data;\
+//	cout << req_data->seq << "-000" << endl;\
+//	uv_async_init(uv_default_loop(), req, after_worker_for_on2);\
+//	uv_async_send(req);\
 
 //req_data->request_work.data = req_data;
 
@@ -309,6 +400,7 @@ NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
+	cout << "!!!! deconstruct ???? " << endl;
 	//uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
@@ -317,7 +409,7 @@ NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
 void NODE_MODULE_LOGIC::OnTest()
 {
 	json j;
-	ASYNC_CALLBACK_FOR_ON(Test,j);
+	ASYNC_CALLBACK_FOR_ON_Q(Test,j);
 }
 //1
 void NODE_MODULE_LOGIC::OnLoginReply(long ret_code,char *ret_msg)
@@ -327,7 +419,7 @@ void NODE_MODULE_LOGIC::OnLoginReply(long ret_code,char *ret_msg)
 	j["ret_msg"]=ret_msg;//strange...
 	j["ret_msg"]=string(ret_msg);
 	//j["ret_msg"]=big2utf8((const char*)ret_msg);//TEST FAILED...
-	ASYNC_CALLBACK_FOR_ON(LoginReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(LoginReply,j);
 }
 //2
 void NODE_MODULE_LOGIC::OnPswChangeReply(long ret_code, char *ret_msg)
@@ -336,7 +428,7 @@ void NODE_MODULE_LOGIC::OnPswChangeReply(long ret_code, char *ret_msg)
 	j["ret_code"]=ret_code;
 	//j["ret_msg"]=ret_msg;
 	j["ret_msg"]=string(ret_msg);
-	ASYNC_CALLBACK_FOR_ON(ApiTickerUpdate,j);
+	ASYNC_CALLBACK_FOR_ON_Q(ApiTickerUpdate,j);
 }
 //3
 void NODE_MODULE_LOGIC::OnApiOrderRequestFailed(tinyint action, const SPApiOrder *order, long err_code, char *err_msg)
@@ -347,7 +439,7 @@ void NODE_MODULE_LOGIC::OnApiOrderRequestFailed(tinyint action, const SPApiOrder
 	//j["err_msg"]=err_msg;
 	j["err_msg"]=string(err_msg);
 	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
-	ASYNC_CALLBACK_FOR_ON(OrderRequestFailed,j);
+	ASYNC_CALLBACK_FOR_ON_Q(OrderRequestFailed,j);
 }
 //4
 void NODE_MODULE_LOGIC::OnApiOrderBeforeSendReport(const SPApiOrder *order)
@@ -355,7 +447,7 @@ void NODE_MODULE_LOGIC::OnApiOrderBeforeSendReport(const SPApiOrder *order)
 	json j;
 	j["rec_no"]=0;
 	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
-	ASYNC_CALLBACK_FOR_ON(OrderBeforeSendReport,j);
+	ASYNC_CALLBACK_FOR_ON_Q(OrderBeforeSendReport,j);
 }
 //5 SPAPI_RegisterMMOrderRequestFailed
 void NODE_MODULE_LOGIC::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long err_code, char *err_msg)
@@ -365,14 +457,14 @@ void NODE_MODULE_LOGIC::OnApiMMOrderRequestFailed(SPApiMMOrder *mm_order, long e
 	//j["err_msg"]=err_msg;
 	j["err_msg"]=string(err_msg);
 	if(NULL!=mm_order) COPY_TO_JSON(SPApiMMOrder,(*mm_order),j["mm_order"]);
-	ASYNC_CALLBACK_FOR_ON(MMOrderRequestFailed,j);
+	ASYNC_CALLBACK_FOR_ON_Q(MMOrderRequestFailed,j);
 }
 //6
 void NODE_MODULE_LOGIC::OnApiMMOrderBeforeSendReport(SPApiMMOrder *mm_order)
 {
 	json j;
 	if(NULL!=mm_order) COPY_TO_JSON(SPApiMMOrder,(*mm_order),j["mm_order"]);
-	ASYNC_CALLBACK_FOR_ON(MMOrderBeforeSendReport,j);
+	ASYNC_CALLBACK_FOR_ON_Q(MMOrderBeforeSendReport,j);
 }
 //7.SPAPI_RegisterQuoteRequestReceivedReport
 void NODE_MODULE_LOGIC::OnApiQuoteRequestReceived(char *product_code, char buy_sell, long qty)
@@ -382,38 +474,35 @@ void NODE_MODULE_LOGIC::OnApiQuoteRequestReceived(char *product_code, char buy_s
 	//j["product_code"]=string(product_code);
 	j["buy_sell"]=buy_sell;
 	j["qty"]=qty;
-	ASYNC_CALLBACK_FOR_ON(QuoteRequestReceived,j);
+	ASYNC_CALLBACK_FOR_ON_Q(QuoteRequestReceived,j);
 }
 //8
 void NODE_MODULE_LOGIC::OnApiTradeReport(long rec_no, const SPApiTrade *trade)
 {
 	json j;
 	if(NULL!=trade) COPY_TO_JSON(SPApiTrade,(*trade),j["trade"]);
-	ASYNC_CALLBACK_FOR_ON(TradeReport,j);
+	ASYNC_CALLBACK_FOR_ON_Q(TradeReport,j);
 }
 //9
 void NODE_MODULE_LOGIC::OnApiLoadTradeReadyPush(long rec_no, const SPApiTrade *trade)
 {
 	json j;
 	if(NULL!=trade) COPY_TO_JSON(SPApiTrade,(*trade),j["trade"]);
-	ASYNC_CALLBACK_FOR_ON(LoadTradeReadyPush,j);
+	ASYNC_CALLBACK_FOR_ON_Q(LoadTradeReadyPush,j);
 }
 //10
 void NODE_MODULE_LOGIC::OnApiPriceUpdate(const SPApiPrice *price)
 {
 	json j;
-	cout << "TO";
 	if(NULL!=price) COPY_TO_JSON(SPApiPrice,(*price),j["price"]);
-	//ASYNC_CALLBACK_FOR_ON(PriceReport,j);
-	j=NULL;//
-	cout << "DO" << endl;
+	ASYNC_CALLBACK_FOR_ON_Q(PriceReport,j);
 }
 //11
 void NODE_MODULE_LOGIC::OnApiTickerUpdate(const SPApiTicker *ticker)
 {
 	json j;
 	if(NULL!=ticker) COPY_TO_JSON(SPApiTicker,(*ticker),j["ticker"]);
-	ASYNC_CALLBACK_FOR_ON(TickerUpdate,j);
+	ASYNC_CALLBACK_FOR_ON_Q(TickerUpdate,j);
 }
 //12
 void NODE_MODULE_LOGIC::OnApiOrderReport(long rec_no, const SPApiOrder *order)
@@ -421,7 +510,7 @@ void NODE_MODULE_LOGIC::OnApiOrderReport(long rec_no, const SPApiOrder *order)
 	json j;
 	j["rec_no"]=rec_no;
 	if(NULL!=order) COPY_TO_JSON(SPApiOrder,(*order),j["order"]);
-	ASYNC_CALLBACK_FOR_ON(OrderReport,j);
+	ASYNC_CALLBACK_FOR_ON_Q(OrderReport,j);
 }
 //13
 void NODE_MODULE_LOGIC::OnInstrumentListReply(bool is_ready, char *ret_msg)
@@ -431,14 +520,14 @@ void NODE_MODULE_LOGIC::OnInstrumentListReply(bool is_ready, char *ret_msg)
 	j["is_ready"]=is_ready;
 	//j["ret_msg"]=ret_msg;
 	j["ret_msg"]=string(ret_msg);
-	ASYNC_CALLBACK_FOR_ON(InstrumentListReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(InstrumentListReply,j);
 }
 //14
 void NODE_MODULE_LOGIC::OnBusinessDateReply(long business_date)
 {
 	json j;
 	j["business_date"]=business_date;
-	ASYNC_CALLBACK_FOR_ON(BusinessDateReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(BusinessDateReply,j);
 }
 //15
 void NODE_MODULE_LOGIC::OnConnectedReply(long host_type, long conn_status)
@@ -446,7 +535,7 @@ void NODE_MODULE_LOGIC::OnConnectedReply(long host_type, long conn_status)
 	json j;
 	j["host_type"]=host_type;
 	j["conn_status"]=conn_status;
-	ASYNC_CALLBACK_FOR_ON(ConnectedReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(ConnectedReply,j);
 }
 //16
 void NODE_MODULE_LOGIC::OnAccountLoginReply(char *accNo, long ret_code, char* ret_msg)
@@ -456,7 +545,7 @@ void NODE_MODULE_LOGIC::OnAccountLoginReply(char *accNo, long ret_code, char* re
 	//j["accNo"]=string(accNo);
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=ret_msg;
-	ASYNC_CALLBACK_FOR_ON(AccountLoginReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(AccountLoginReply,j);
 }
 //17
 void NODE_MODULE_LOGIC::OnAccountLogoutReply(long ret_code, char* ret_msg)
@@ -464,35 +553,35 @@ void NODE_MODULE_LOGIC::OnAccountLogoutReply(long ret_code, char* ret_msg)
 	json j;
 	j["ret_code"]=ret_code;
 	j["ret_msg"]=ret_msg;
-	ASYNC_CALLBACK_FOR_ON(AccountLogoutReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(AccountLogoutReply,j);
 }
 //18
 void NODE_MODULE_LOGIC::OnAccountInfoPush(const SPApiAccInfo *acc_info)
 {
 	json j;
 	if(NULL!=acc_info) COPY_TO_JSON(SPApiAccInfo,(*acc_info),j["acc_info"]);
-	ASYNC_CALLBACK_FOR_ON(AccountInfoPush,j);
+	ASYNC_CALLBACK_FOR_ON_Q(AccountInfoPush,j);
 }
 //19
 void NODE_MODULE_LOGIC::OnAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
 	if(NULL!=pos) COPY_TO_JSON(SPApiPos,(*pos),j["pos"]);
-	ASYNC_CALLBACK_FOR_ON(AccountPositionPush,j);
+	ASYNC_CALLBACK_FOR_ON_Q(AccountPositionPush,j);
 }
 //20
 void NODE_MODULE_LOGIC::OnUpdatedAccountPositionPush(const SPApiPos *pos)
 {
 	json j;
 	if(NULL!=pos) COPY_TO_JSON(SPApiPos,(*pos),j["pos"]);
-	ASYNC_CALLBACK_FOR_ON(UpdatedAccountPositionPush,j);
+	ASYNC_CALLBACK_FOR_ON_Q(UpdatedAccountPositionPush,j);
 }
 //21
 void NODE_MODULE_LOGIC::OnUpdatedAccountBalancePush(const SPApiAccBal *acc_bal)
 {
 	json j;
 	if(NULL!=acc_bal) COPY_TO_JSON(SPApiAccBal,(*acc_bal),j["acc_bal"]);
-	ASYNC_CALLBACK_FOR_ON(UpdatedAccountBalancePush,j);
+	ASYNC_CALLBACK_FOR_ON_Q(UpdatedAccountBalancePush,j);
 }
 //22
 void NODE_MODULE_LOGIC::OnProductListByCodeReply(char *inst_code, bool is_ready, char *ret_msg)
@@ -503,7 +592,7 @@ void NODE_MODULE_LOGIC::OnProductListByCodeReply(char *inst_code, bool is_ready,
 	//j["ret_msg"]=ret_msg;
 	j["ret_msg"]=string(ret_msg);
 	j["is_ready"]=is_ready;
-	ASYNC_CALLBACK_FOR_ON(ProductListByCodeReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(ProductListByCodeReply,j);
 }
 //23
 void NODE_MODULE_LOGIC::OnApiAccountControlReply(long ret_code, char *ret_msg)
@@ -512,7 +601,7 @@ void NODE_MODULE_LOGIC::OnApiAccountControlReply(long ret_code, char *ret_msg)
 	j["ret_code"]=ret_code;
 	//j["ret_msg"]=ret_msg;
 	j["ret_msg"]=string(ret_msg);
-	ASYNC_CALLBACK_FOR_ON(AccountControlReply,j);
+	ASYNC_CALLBACK_FOR_ON_Q(AccountControlReply,j);
 }
 //1.3
 inline void SPAPI_SetLanguageId(MyUvShareData * my_data){

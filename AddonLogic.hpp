@@ -175,10 +175,12 @@ void after_worker_for_on_q(uv_async_t * req)
 			//argv[1]=v8::String::NewFromUtf8(isolate,on.c_str());
 			//argv[0]=v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()));
 			//if(!callback.IsEmpty()){
+			qi=NULL;
 			callback->Call(v8::Null(isolate), argc, argv);
 			//}
+		}else{
+			qi=NULL;
 		}
-		qi=NULL;//delete
 	}while(f_continue);
 	req->data=NULL;
 	free(my_data);

@@ -99,7 +99,7 @@ class mutex_queue
 
 static mutex_queue<json> _callback_queue;
 ApiProxyWrapper apiProxyWrapper;
-//uv_mutex_t cbLock;//
+uv_mutex_t cbLock;
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -183,7 +183,9 @@ void after_worker_for_on_q(uv_async_t * req)
 	req->data=NULL;
 	free(my_data);
 	//cout << seq << "]" << endl;
+	uv_mutex_lock(&cbLock);
 	uv_close((uv_handle_t *) req, close_cb_q);
+	uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -244,13 +246,13 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
-	//uv_mutex_init(&cbLock);
+	uv_mutex_init(&cbLock);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
 	//cout << "Deconstruct ApiProxyWrapper." << endl;
-	//uv_mutex_destroy(&cbLock);
+	uv_mutex_destroy(&cbLock);
 	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
 	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }

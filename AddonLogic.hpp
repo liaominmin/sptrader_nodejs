@@ -126,7 +126,8 @@ std::string any2utf8(std::string in,std::string fromEncode,std::string toEncode)
 }
 std::string gbk2utf8(const char* in) { return any2utf8(std::string(in),std::string("gbk"),std::string("utf-8")); }
 std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::string("big5"),std::string("utf-8")); }
-map<string, v8::Persistent<v8::Function> > _callback_map;
+//map<string, v8::Persistent<v8::Function> > _callback_map;
+v8::Persistent<v8::Function> _callback_for_on;
 struct MyUvShareDataOn
 {
 	int seq=-99;
@@ -165,14 +166,17 @@ void after_worker_for_on_q(uv_async_t * req)
 		f_continue=qi.is_null() ? false: true;
 		if(f_continue){
 			//cout << qi.dump() << endl;
-			string on=qi["on"];
-			json data=qi["data"];
-			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_map[on]);
+			//string on=qi["on"];
+			//json data=qi["data"];
+			//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_map[on]);
+			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_for_on);
 			const unsigned argc = 1;
-			v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()))};
-			if(!callback.IsEmpty()){
-				callback->Call(v8::Null(isolate), argc, argv);
-			}
+			v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,qi.dump().c_str()))};
+			//argv[1]=v8::String::NewFromUtf8(isolate,on.c_str());
+			//argv[0]=v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()));
+			//if(!callback.IsEmpty()){
+			callback->Call(v8::Null(isolate), argc, argv);
+			//}
 		}
 		qi=NULL;//delete
 	}while(f_continue);
@@ -1051,6 +1055,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 	if(!callback.IsEmpty())
 	{
 		callback->Call(v8::Null(isolate), argc, argv);
+		//callback->Reset();
 	}
 }
 #define METHOD_START_ONCALL($methodname)\
@@ -1081,10 +1086,11 @@ void after_worker_for_call(uv_work_t * req,int status){
 		args.GetReturnValue().Set(rt);\
 	}
 METHOD_START_ONCALL(_on){
-	COPY_V8_TO_STR(args[0],_on);
-	if(!callback.IsEmpty()){
-		_callback_map[string(_on)].Reset(isolate, callback);
-	}
+	//COPY_V8_TO_STR(args[0],_on);
+	//if(!callback.IsEmpty()){
+	//	_callback_map[string(_on)].Reset(isolate, callback);
+	//}
+	_callback_for_on.Reset(isolate,callback);
 }METHOD_END_ONCALL(_on)
 /* async mode if has(callback),pls use as much as possible, 'coz sync mode might block the nodejs */
 METHOD_START_ONCALL(_call){

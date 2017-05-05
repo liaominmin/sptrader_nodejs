@@ -1010,8 +1010,8 @@ std::map<std::string,void(*)(MyUvShareData*my_data)> _apiDict{
 #include <stdexcept>
 // NOTES: In this worker thread, you cannot access any V8/node js variables
 void worker_for_call(uv_work_t * req){
-	//MyUvShareData * my_data = (MyUvShareData *)req->data;//no
-	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	MyUvShareData * my_data = (MyUvShareData *)req->data;//no
+	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	json in=my_data->in;
 	string api=my_data->api;
 	json rst;
@@ -1039,6 +1039,7 @@ void worker_for_call(uv_work_t * req){
 	my_data->out_s=my_data->out.dump();
 	my_data->out=NULL;
 	my_data->rst=rst;
+	rst=NULL;
 }
 void after_worker_for_call(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();

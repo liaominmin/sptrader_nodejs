@@ -186,7 +186,8 @@ void after_worker_for_on_q(uv_async_t * req)
 	free(my_data);
 	//cout << seq << "]" << endl;
 	uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, close_cb_q);
+	//uv_close((uv_handle_t *) req, close_cb_q);
+	uv_close((uv_handle_t *) req, NULL);
 	uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)

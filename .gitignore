@@ -3,7 +3,6 @@ node-v7.8.0
 Log
 product
 *.log
-node_modules/nan
+node_modules/*
 core
 tmp
-node_modules/nodejs-websocket

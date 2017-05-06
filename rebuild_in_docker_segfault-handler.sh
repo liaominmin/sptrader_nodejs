@@ -22,7 +22,8 @@ cd $(dirname "$0")
 pwd
 
 # echo build segfault-handler
-npm install segfault-handler bson q
+#npm install segfault-handler bson q
+npm install --save bugsnag bugsnag-segfault-handler@latest segfault-handler@latest bson q
 npm list
 
 #cp -Rf node_modules/* ../sptrader_api_server/node_modules/

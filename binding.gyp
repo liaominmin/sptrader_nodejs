@@ -10,8 +10,6 @@
 			}
 
 		,"cflags": [ "-g3", "-ggdb", "-O0" ]
-		,"cflags_dev": [ "-ggdb","-c","-O3","-std=c++0x","-fexceptions","-frtti","-D_DEBUG=1"]
-		,"cflags_prod": [ "-c","-O3","-std=c++0x","-fexceptions","-frtti","-DBOOST_MODE=1","-DBOOST_UTILS=1","-D_DEBUG=0"]
-			,"cflags_cc": ["-g3","-O0","-ggdb","-fexceptions","-frtti","-D__LINUX__=1","-D_DEBUG=1"]
+		,"cflags_cc": ["-g3","-c","-O3","-std=c++0x","-ggdb","-fexceptions","-frtti","-D__LINUX__=1","-DBOOST_MODE=1","-DBOOST_UTILS=1","-D_DEBUG=1"]
 	}]
 }

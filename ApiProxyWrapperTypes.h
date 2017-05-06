@@ -26,7 +26,8 @@
 //	}
 #define COPY_STF(sss,ttt,fff) try{ttt[#fff]=sss.fff;}catch(...){ cout << "COPY_STF ERRORKO "<< #fff << "=" << sss.fff << endl;}
 #define COPY_TO_STF_VAL(sss,ttt,fff) if(!sss[#fff].is_null())ttt.fff=sss[#fff];
-#define COPY_TO_STF_STR(sss,ttt,fff) if(!sss[#fff].is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
+//#define COPY_TO_STF_STR(sss,ttt,fff) if(!sss[#fff].is_null())strcpy(ttt.fff,sss[#fff].get<string>().c_str());
+#define COPY_TO_STF_STR(sss,ttt,fff) if(!sss[#fff].is_null())strncpy(ttt.fff,sss[#fff].get<string>().c_str(),(sizeof ttt.fff));
 //#define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())try{ttt.fff,sss[#fff].get<char>();}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].get<char>() <<endl;}
 #define COPY_TO_STF_CHR(sss,ttt,fff) if(!sss[#fff].is_null())try{char c_##fff[1];strncpy(c_##fff,sss[#fff].get<string>().c_str(),1);ttt.fff=c_##fff[0];}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].dump() <<endl;}
 #define COPY_TO_STF_TINYINT(sss,ttt,fff) if(!sss[#fff].is_null())try{int i_##fff;i_##fff=sss[#fff];ttt.fff=(tinyint)i_##fff;}catch(...){cout<< " ERRORKO "<< #fff << "=" << sss[#fff].dump() <<endl;}

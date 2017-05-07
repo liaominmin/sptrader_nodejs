@@ -134,10 +134,6 @@ struct MyUvShareDataOn
 };
 struct MyUvShareData
 {
-	union {
-		uv_work_t request_work;
-		uv_async_t request_async;
-	};
 	int seq=-99;//for tracing sequence
 	string api;//the api name
 	string out_s;
@@ -181,7 +177,8 @@ void after_worker_for_on_q(uv_async_t * req)
 			//argv[0]=v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()));
 			//if(!callback.IsEmpty()){
 			qi=NULL;
-			callback->Call(v8::Null(isolate), argc, argv);
+			//callback->Call(v8::Null(isolate), argc, argv);
+			callback->Call(isolate->GetCurrentContext()->Global(), argc, argv);
 			//}
 		}else{
 			qi=NULL;
@@ -248,7 +245,7 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	qi=NULL;\
 	$jsonData=NULL;\
 	uv_async_t *req = (uv_async_t *) malloc(sizeof(uv_async_t));\
-	req->data=data;\
+	req->data=(void*)data;\
 	uv_async_init(uv_default_loop(), req, after_worker_for_on_q);\
 	uv_async_send(req);
 
@@ -1117,7 +1114,6 @@ METHOD_START_ONCALL(_call){
 	if(args_len>0){
 		COPY_V8_TO_STR(args[0],_call);
 		MyUvShareData * req_data = new MyUvShareData;
-		req_data->request_work.data = req_data;
 		req_data->api=string(_call);
 		req_data->in=json::parse(json_stringify(isolate,in));
 		if(!callback.IsEmpty()){//ASYNC
@@ -1129,7 +1125,9 @@ METHOD_START_ONCALL(_call){
 			uv_queue_work(uv_default_loop(),req,worker_for_call,after_worker_for_call);
 		}else{//SYNC
 			rt->Set(v8::String::NewFromUtf8(isolate,"mode"), v8::String::NewFromUtf8(isolate,"SYNC"));
-			worker_for_call(& req_data->request_work);
+			uv_work_t *req= new uv_work_t();
+			req->data=(void*)req_data;
+			worker_for_call(req);
 			out=v8::Local<v8::Object>::Cast(v8::JSON::Parse(
 						v8::String::NewFromUtf8(isolate,req_data->out_s.c_str())
 						));
@@ -1137,7 +1135,9 @@ METHOD_START_ONCALL(_call){
 			if(0==rc){
 				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"OK"));
 			}
+			req->data=NULL;
 			delete req_data;
+			delete req;
 		}
 		rt->Set(v8::String::NewFromUtf8(isolate,"api"), v8::String::NewFromUtf8(isolate,_call));
 	}

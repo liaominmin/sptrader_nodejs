@@ -148,7 +148,12 @@ struct MyUvShareData
 	int rc=-99;
 };
 void close_cb_q(uv_handle_t* req){
-	if(NULL!=req) free(req);
+	if(NULL!=req){
+		//free(req);
+		cout << "P";
+	}else{
+		cout << "(P)";
+	}
 }
 #include <atomic>
 std::atomic<int> seq_count(0);
@@ -186,8 +191,8 @@ void after_worker_for_on_q(uv_async_t * req)
 	free(my_data);
 	//cout << seq << "]" << endl;
 	uv_mutex_lock(&cbLock);
-	//uv_close((uv_handle_t *) req, close_cb_q);
-	uv_close((uv_handle_t *) req, NULL);
+	uv_close((uv_handle_t *) req, close_cb_q);
+	//uv_close((uv_handle_t *) req, NULL);
 	uv_mutex_unlock(&cbLock);
 }
 //conert v8 string to char* (for sptrader api)
@@ -1045,22 +1050,24 @@ void worker_for_call(uv_work_t * req){
 void after_worker_for_call(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
-	//MyUvShareData * my_data = (MyUvShareData *)req->data;
-	MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
+	MyUvShareData * my_data = (MyUvShareData *)req->data;
+	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
 	//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
 	const unsigned argc = 1;
+
 	json rst=my_data->rst;
 	rst["rc"]=my_data->rc;
 	if(0==my_data->rc) rst["STS"]="OK";
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
+	rst=NULL;
 
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
 	//Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), argc, argv);
 	//Local<Function>::New(isolate, my_data->callback)->Call(v8::Null(isolate), argc, argv);
-	my_data->callback.Reset();
 	req->data=NULL;//unhook before delete my_data
+	my_data->callback.Reset();
+	//my_data->callback.Dispose();
 	my_data->rst=NULL;
-	rst=NULL;
 	delete my_data;
 	delete req;
 	//if(!callback.IsEmpty())

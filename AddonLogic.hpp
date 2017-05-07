@@ -170,6 +170,7 @@ std::atomic<int> seq_count(0);
 //void after_worker_for_on_q(uv_async_t * req)
 void * after_worker_for_on_q(uv_callback_t *callback, void *data)
 {
+	cout << "Q" << endl;
 	//int seq = *((int *)data);??
 	//int seq=(int *)data;
 	//cout << seq << "[" << endl;

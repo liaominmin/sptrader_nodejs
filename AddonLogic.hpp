@@ -102,7 +102,6 @@ class mutex_queue
 
 static mutex_queue<json> _callback_queue;
 ApiProxyWrapper apiProxyWrapper;
-uv_mutex_t cbLock;
 #include <iconv.h> //for gbk/big5/utf8
 int code_convert(char *from_charset,char *to_charset,char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
@@ -131,10 +130,6 @@ std::string gbk2utf8(const char* in) { return any2utf8(std::string(in),std::stri
 std::string big2utf8(const char* in) { return any2utf8(std::string(in),std::string("big5"),std::string("utf-8")); }
 //map<string, v8::Persistent<v8::Function> > _callback_map;
 v8::Persistent<v8::Function> _callback_for_on;
-struct MyUvShareDataOn
-{
-	int seq=-99;
-};
 struct MyUvShareData
 {
 	int seq=-99;//for tracing sequence
@@ -146,34 +141,11 @@ struct MyUvShareData
 	v8::Persistent<v8::Function> callback;
 	int rc=-99;
 };
-void close_cb_q(uv_handle_t* req){
-	if(NULL!=req){
-		//free(req);
-		cout << "P";
-	}else{
-		cout << "(P)";
-	}
-}
 #include <atomic>
 std::atomic<int> seq_count(0);
-//void worker_for_on(uv_work_t * req){}
-//void * after_worker_for_on_q(uv_callback_t *callback, void *data)
-//{
-//	//printf("dynamic pointer: (%p) %s\n", data, (char*)data);
-//	cout << "!!!!!!!!!!!!!!!!! on_dynamic_pointer" << endl;
-//	MyUvShareDataOn * mydata=(MyUvShareDataOn *) data;
-//	mydata->rst=NULL;
-//	free(data);
-//	//jj=NULL;
-//	dynamic_call_counter++;
-//}
-//void after_worker_for_on_q(uv_async_t * req)
 void * after_worker_for_on_q(uv_callback_t *callback, void *data)
 {
-	cout << "Q" << endl;
-	//int seq = *((int *)data);??
-	//int seq=(int *)data;
-	//cout << seq << "[" << endl;
+	cout << "Q";
 	bool f_continue=false;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
@@ -181,18 +153,9 @@ void * after_worker_for_on_q(uv_callback_t *callback, void *data)
 		json qi=_callback_queue.pop();
 		f_continue=qi.is_null() ? false: true;
 		if(f_continue){
-			//cout << qi.dump() << endl;
-			//string on=qi["on"];
-			//json data=qi["data"];
-			//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_map[on]);
 			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_for_on);
 			const unsigned argc = 1;
 			v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,qi.dump().c_str()))};
-			//argv[1]=v8::String::NewFromUtf8(isolate,on.c_str());
-			//argv[0]=v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()));
-			//if(!callback.IsEmpty()){
-			//qi=NULL;
-			//callback->Call(v8::Null(isolate), argc, argv);
 			callback->Call(isolate->GetCurrentContext()->Global(), argc, argv);
 			qi=NULL;
 			//}
@@ -200,44 +163,6 @@ void * after_worker_for_on_q(uv_callback_t *callback, void *data)
 			qi=NULL;
 		}
 	}while(f_continue);
-	//cout << seq << "]" << endl;
-	/*
-	MyUvShareDataOn * my_data = (MyUvShareDataOn *) req->data;
-	int seq = my_data->seq;
-	//cout << seq << "[" << endl;
-	bool f_continue=false;
-	v8::Isolate* isolate = v8::Isolate::GetCurrent();
-	v8::HandleScope handle_scope(isolate);
-	do{
-		json qi=_callback_queue.pop();
-		f_continue=qi.is_null() ? false: true;
-		if(f_continue){
-			//cout << qi.dump() << endl;
-			//string on=qi["on"];
-			//json data=qi["data"];
-			//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_map[on]);
-			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, _callback_for_on);
-			const unsigned argc = 1;
-			v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,qi.dump().c_str()))};
-			//argv[1]=v8::String::NewFromUtf8(isolate,on.c_str());
-			//argv[0]=v8::JSON::Parse(v8::String::NewFromUtf8(isolate,data.dump().c_str()));
-			//if(!callback.IsEmpty()){
-			qi=NULL;
-			//callback->Call(v8::Null(isolate), argc, argv);
-			callback->Call(isolate->GetCurrentContext()->Global(), argc, argv);
-			//}
-		}else{
-			qi=NULL;
-		}
-	}while(f_continue);
-	req->data=NULL;
-	free(my_data);
-	//cout << seq << "]" << endl;
-	uv_mutex_lock(&cbLock);
-	uv_close((uv_handle_t *) req, close_cb_q);
-	//uv_close((uv_handle_t *) req, NULL);
-	uv_mutex_unlock(&cbLock);
-	*/
 }
 //conert v8 string to char* (for sptrader api)
 inline void V8ToCharPtr(const v8::Local<v8::Value>& v8v, char* rt){
@@ -280,14 +205,6 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 	if (try_catch.HasCaught()) { result = try_catch.Exception(); }
 	return scope.Escape(result);
 }
-//uv_async_t *req = (uv_async_t *) malloc(sizeof(uv_async_t));
-//req->data=(void*)data;
-//uv_async_init(uv_default_loop(), req, after_worker_for_on_q);
-//uv_async_send(req);
-	//MyUvShareDataOn *data = (MyUvShareDataOn *)malloc(sizeof(MyUvShareDataOn));\
-	//data->seq=(++seq_count);\
-	cout << "ASYNC_CALLBACK_FOR_ON_Q uv_callback_fire" << #$callbackName << endl;\
-
 #define ASYNC_CALLBACK_FOR_ON_Q($callbackName,$jsonData)\
 	int seq=(++seq_count);\
 	if(seq > INT_MAX - 1000) seq_count=0;\
@@ -302,16 +219,11 @@ inline v8::Handle<v8::Value> json_parse(v8::Isolate* isolate, std::string const&
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
-	uv_mutex_init(&cbLock);
-	uv_callback_init(uv_default_loop(), &_uv_callback_on_ptr, after_worker_for_on_q, UV_DEFAULT);//...
+	uv_callback_init(uv_default_loop(), &_uv_callback_on_ptr, after_worker_for_on_q, UV_DEFAULT);
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
 NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
-	//cout << "Deconstruct ApiProxyWrapper." << endl;
-	uv_mutex_destroy(&cbLock);
-	//apiProxyWrapper.SPAPI_Logout(user_id);//1.6
-	//apiProxyWrapper.SPAPI_Uninitialize();//1.2
 }
 //0
 void NODE_MODULE_LOGIC::OnTest()
@@ -1100,8 +1012,6 @@ void after_worker_for_call(uv_work_t * req,int status){
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);
 	MyUvShareData * my_data = (MyUvShareData *)req->data;
-	//MyUvShareData * my_data = static_cast<MyUvShareData *>(req->data);
-	//v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
 	const unsigned argc = 1;
 
 	json rst=my_data->rst;
@@ -1111,21 +1021,12 @@ void after_worker_for_call(uv_work_t * req,int status){
 	rst=NULL;
 
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, my_data->callback);
-	//Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), argc, argv);
-	//Local<Function>::New(isolate, my_data->callback)->Call(v8::Null(isolate), argc, argv);
 	req->data=NULL;//unhook before delete my_data
 	my_data->callback.Reset();
-	//my_data->callback.Dispose();
 	my_data->rst=NULL;
 	delete my_data;
 	delete req;
-	//if(!callback.IsEmpty())
-	//{
-	//	callback->Call(v8::Null(isolate), argc, argv);
 	callback->Call(isolate->GetCurrentContext()->Global(), argc, argv);
-	//	//callback->Reset();
-	//}
-	//delete callback;
 }
 #define METHOD_START_ONCALL($methodname)\
 	void NODE_MODULE_LOGIC::$methodname(const v8::FunctionCallbackInfo<v8::Value>& args) {\
@@ -1156,13 +1057,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 	}
 
 METHOD_START_ONCALL(_on){
-	//COPY_V8_TO_STR(args[0],_on);
-	//if(!callback.IsEmpty()){
-	//	_callback_map[string(_on)].Reset(isolate, callback);
-	//}
 	_callback_for_on.Reset(isolate,callback);
-
-	cout << "!!!! uv_callback_init " << endl;
 }METHOD_END_ONCALL(_on)
 /* async mode if has(callback),pls use as much as possible, 'coz sync mode might block the nodejs */
 METHOD_START_ONCALL(_call){

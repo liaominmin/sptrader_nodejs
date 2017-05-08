@@ -145,7 +145,7 @@ struct MyUvShareData
 std::atomic<int> seq_count(0);
 void * after_worker_for_on_q(uv_callback_t *callback, void *data)
 {
-	cout << "Q";
+	cout << " ";
 	bool f_continue=false;
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope handle_scope(isolate);

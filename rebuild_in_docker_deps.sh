@@ -22,14 +22,16 @@ cd $(dirname "$0")
 pwd
 
 # echo build segfault-handler
-npm install segfault-handler@latest bson q
+npm install segfault-handler@latest bson q node-persist
 #npm install --save bugsnag bugsnag-segfault-handler@latest segfault-handler@latest bson q
 npm list
 
+mv ./node_modules/* ../sptrader_api_server/node_modules/
+
 #cp -Rf node_modules/* ../sptrader_api_server/node_modules/
-cd ../sptrader_api_server/
-ls -al
-cp -Rf ../sptrader/node_modules/* ./node_modules/
+#cd ../sptrader_api_server/
+#ls -al
+#cp -Rf ../sptrader/node_modules/* ./node_modules/
 #npm install segfault-handler bson q
 #npm list
 

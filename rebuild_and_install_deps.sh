@@ -9,6 +9,6 @@ cd $SPTRADERDIR
 
 docker run -v"$PWD:/sptrader" -v"$PWD/../sptrader_api_server/:/sptrader_api_server" -v"$PWD/tmp:/tmp" -ti -w/sptrader $1 \
 	cmptech/auto_ubuntuessential_nodejs_sharessl_python \
-	sh rebuild_in_docker_segfault-handler.sh $*
+	sh rebuild_in_docker_deps.sh $*
 
 

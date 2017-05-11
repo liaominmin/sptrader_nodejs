@@ -26,7 +26,8 @@ npm install segfault-handler@latest bson q node-persist
 #npm install --save bugsnag bugsnag-segfault-handler@latest segfault-handler@latest bson q
 npm list
 
-mv ./node_modules/* ../sptrader_api_server/node_modules/
+cp -Rf ./node_modules/* ../sptrader_api_server/node_modules/
+rm -Rf ./node_modules/*
 
 #cp -Rf node_modules/* ../sptrader_api_server/node_modules/
 #cd ../sptrader_api_server/

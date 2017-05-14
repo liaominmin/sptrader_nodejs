@@ -12,7 +12,7 @@ cd $SPTRADERDIR
 export TZ=Asia/Hong_Kong
 echo run_api_server_with_docker.sh.date=`date`
 
-docker run -v"$PWD:/sptrader" -ti -w/sptrader $1 \
+docker run -v"$PWD:/sptrader" -i -w/sptrader $1 \
 	cmptech/auto_ubuntuessential_nodejs_sharessl \
 	sh run_api_server_in_docker.sh $*
 

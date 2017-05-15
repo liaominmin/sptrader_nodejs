@@ -37,16 +37,19 @@ ggit push -v --set-upstream origin refs/heads/$sync_remote:refs/heads/master
 ggit checkout -f $local_name
 
 # delete the $sync_remote
-ggit branch -D $sync_remote
+#ggit branch -D $sync_remote
+ggit branch -m $local_name ${local_name}_prev
+
+ggit branch -m $sync_remote $local_name
 
 # let $sync_remote to most update {
 
-ggit fetch origin 
-
-#ggit pull --no-commit --log origin dev 
-ggit pull --no-commit --log origin master
-
-ggit submodule update --init --recursive 
+#ggit fetch origin 
+#
+##ggit pull --no-commit --log origin dev 
+#ggit pull --no-commit --log origin master
+#
+#ggit submodule update --init --recursive 
 
 # let $sync_remote to most update }
 

@@ -32,7 +32,7 @@ module.exports={
 			throw new Error("-server_port is mandatory")
 		})();
 		var http_server=require('http').createServer(logicModule({argo}))
-			.listen(ppp,hhh,()=>{logger.log(hhh+':'+ppp)});
+			.listen(ppp,hhh,()=>{logger.log('web listen on ',hhh,':',ppp)});
 
 		////////////////////////////////////////////////////////// WebSocketServer Version (TODO)
 		var ws_port=argo.ws_port,ws_host=argo.ws_host||'0.0.0.0';

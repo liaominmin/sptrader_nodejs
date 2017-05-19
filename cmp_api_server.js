@@ -22,7 +22,7 @@ module.exports={
 		logger.log("process.versions=",process.versions);
 
 		// LOGIC MODULE
-		var logicModule=require(argo.logic||"./sptrader_api_server_demo_logic.js");
+		var appModule=require(argo.app||"./sptrader_api_server_demo_app.js");
 
 		////////////////////////////////////////////////////////// WebServer Version
 		//NOTES:
@@ -31,7 +31,7 @@ module.exports={
 		var hhh=argo.server_host||argo.h||'0.0.0.0',ppp=argo.server_port||argo.p||(()=>{
 			throw new Error("-server_port is mandatory")
 		})();
-		var http_server=require('http').createServer(logicModule({argo}))
+		var http_server=require('http').createServer(appModule({argo}))
 			.listen(ppp,hhh,()=>{logger.log('web listen on ',hhh,':',ppp)});
 
 		////////////////////////////////////////////////////////// WebSocketServer Version (TODO)

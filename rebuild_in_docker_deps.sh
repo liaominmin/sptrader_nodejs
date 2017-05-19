@@ -22,7 +22,7 @@ cd $(dirname "$0")
 pwd
 
 # echo build segfault-handler
-npm install segfault-handler@latest bson q node-persist
+npm install segfault-handler@latest bson q node-persist moment-timezone
 #npm install --save bugsnag bugsnag-segfault-handler@latest segfault-handler@latest bson q
 npm list
 

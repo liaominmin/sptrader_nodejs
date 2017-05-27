@@ -31,8 +31,9 @@ module.exports={
 		var hhh=argo.server_host||argo.h||'0.0.0.0',ppp=argo.server_port||argo.p||(()=>{
 			throw new Error("-server_port is mandatory")
 		})();
-		var http_server=require('http').createServer(appModule({argo}))
-			.listen(ppp,hhh,()=>{logger.log('web listen on ',hhh,':',ppp)});
+		var http_server=require('http').createServer(appModule({argo}));
+		argo.http_server=http_server;//let the internal logic can access
+		http_server.listen(ppp,hhh,()=>{logger.log('web listen on ',hhh,':',ppp)});
 
 		////////////////////////////////////////////////////////// WebSocketServer Version (TODO)
 		var ws_port=argo.ws_port,ws_host=argo.ws_host||'0.0.0.0';
@@ -51,12 +52,12 @@ module.exports={
 					process.exit(3);//NOTES: outside sh caller will not handle for case 3
 				}
 				_d_("pid=",process.pid);
-				process.on("exit",function(){
-					process.nextTick(function(){
-						_d_('This should not run');
-					});
-					_d_('About to exit.');
-				});
+				//process.on("exit",function(){
+				//	process.nextTick(function(){
+				//		_d_('This should not run');
+				//	});
+				//	_d_('About to exit.');
+				//});
 				ws.setMaxBufferLength(20971520);
 				var ws_server = ws.createServer(
 					//{"secure":true},
@@ -72,7 +73,9 @@ module.exports={
 						_d_("ws_server.conn.error",e);
 					});
 					conn.on("text", function (data_s) {
-						//TODO fwd logic to http server above in future
+						//TODO fwd logic to http server above in future !!!!
+						//if cmp fwd to http server
+						//else maybe web socket push...
 						_d_("on text",data_s);
 					});
 					conn.on("close", function (code, reason){
@@ -90,6 +93,7 @@ module.exports={
 					}
 				});
 				_d_(" listen on "+ws_port);
+				argo.ws_server=ws_server;
 				ws_server.listen(ws_port);
 			}catch(ex){
 				_d_("ws.ex=",ex);

@@ -73,21 +73,18 @@ using json = nlohmann::json;
 #include <mutex>
 #include <climits> //for INT_MAX
 using namespace std;//for string
-
 template<typename T>
 class mutex_queue
 {
 	private:
 		std::queue<T> m_queque;
 		mutable std::mutex m_mutex;
-
 	public:
 		void push( const T value )
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
 			m_queque.push(value);
 		}
-
 		T pop()
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
@@ -99,7 +96,6 @@ class mutex_queue
 			return rt;
 		}
 };
-
 static mutex_queue<json> _callback_queue;
 ApiProxyWrapper apiProxyWrapper;
 #include <iconv.h> //for gbk/big5/utf8
@@ -223,8 +219,7 @@ NODE_MODULE_LOGIC::NODE_MODULE_LOGIC(void){
 	apiProxyWrapper.SPAPI_Initialize();//1.1
 	apiProxyWrapper.SPAPI_RegisterApiProxyWrapperReply(this);
 }
-NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){
-}
+NODE_MODULE_LOGIC::~NODE_MODULE_LOGIC(void){}
 //0
 void NODE_MODULE_LOGIC::OnTest()
 {

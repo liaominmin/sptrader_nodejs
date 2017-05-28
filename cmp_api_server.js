@@ -1,28 +1,25 @@
 //NOTES
-//the universal api server design by cmptech.info
-//USAGE
-//var cmp_api_server=require('./cmp_api_server.js');
-//cmp_api_server.daemon(cmp_api_server.argv2o(process.argv));
+//the universal api server design by cmptech
+//USAGE:require('./cmp_api_server.js')();
 
 var logger=console;//default logger
-
-module.exports={
+var cmp_api_server;
+module.exports=cmp_api_server={
 	argv2o:argv=>{
 		var m,mm,rt={};
 		for(k in argv)(m=(rt[""+k]=argv[k]).match(/^--?([a-zA-Z0-9-_]*)=(.*)/))&&(rt[m[1]]=(mm=m[2].match(/^".*"$/))?mm[1]:m[2]);
 		return rt;
 	}
 	,daemon:argo=>{
+		if(!argo) argo=cmp_api_server.argv2o(process.argv);
+
 		process.env.UV_THREADPOOL_SIZE = argo.UV_THREADPOOL_SIZE || 126;//MAX=255, increase the thread pool for uv_queue_work()
-
 		logger.log(process.env);
-
-		logger.log("__dirname=" + __dirname);
-
+		//logger.log("__dirname=" + __dirname);
 		logger.log("process.versions=",process.versions);
 
-		// LOGIC MODULE
-		var appModule=require(argo.app||"./sptrader_api_server_demo_app.js");
+		if(!argo.app) throw new Error('-app is needed');
+		var appModule=require(argo.app);
 
 		////////////////////////////////////////////////////////// WebServer Version
 		//NOTES:
@@ -82,7 +79,7 @@ module.exports={
 						//clean up
 						_client_conn_a[_key]=null;
 						delete _client_conn_a[_key];
-						_d_("ws_server.close="+code+","+reason,"key="+this.key);
+						_d_("ws_server.close="+code+","+reason,"key="+cmp_api_server.key);
 					});
 				});
 				ws_server.on('error', function(e){

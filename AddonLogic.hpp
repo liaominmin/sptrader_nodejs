@@ -1011,7 +1011,7 @@ void after_worker_for_call(uv_work_t * req,int status){
 
 	json rst=my_data->rst;
 	rst["rc"]=my_data->rc;
-	if(0==my_data->rc) rst["STS"]="OK";
+	if(0==my_data->rc) rst["STS"]="OK";//NOTES: few API return rc!=0 but OK, e.g. the -Count() for that case, missing STS doesn't not means KO....
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 	rst=NULL;
 

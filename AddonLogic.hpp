@@ -738,7 +738,7 @@ inline void SPAPI_GetInstrumentByCode(MyUvShareData * my_data){
 //1.38
 inline void SPAPI_GetProductCount(MyUvShareData * my_data){
 	json in=my_data->in;
-	int rc = my_data->rc = apiProxyWrapper.SPAPI_GetProductCount();
+	my_data->rc = apiProxyWrapper.SPAPI_GetProductCount();
 }
 //1.39
 inline void SPAPI_GetProduct(MyUvShareData * my_data){
@@ -759,8 +759,8 @@ inline void SPAPI_GetProductByCode(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["prod_code"],prod_code);
 	SPApiProduct prod={0};
-	my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
-	if (my_data->rc == 0){
+	int rc=my_data->rc = apiProxyWrapper.SPAPI_GetProductByCode(prod_code,&prod);//返回一个整型的帐户现金结余数 ？？奇怪，似乎是指账号数，因为demo只是“1“,后面再观察下...
+	if (rc == 0){
 		json out;
 		COPY_TO_JSON(SPApiProduct,prod,out);
 		my_data->out=out;
@@ -813,14 +813,14 @@ inline void SPAPI_SubscribeQuoteRequest(MyUvShareData * my_data){
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["prod_code"],prod_code);
 	COPY_TO_INT(in["mode"],mode);
-	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeQuoteRequest(user_id, prod_code, mode);
+	my_data->rc = apiProxyWrapper.SPAPI_SubscribeQuoteRequest(user_id, prod_code, mode);
 }
 //1.48
 inline void SPAPI_SubscribeAllQuoteRequest(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_INT(in["mode"],mode);
-	int rc= my_data->rc = apiProxyWrapper.SPAPI_SubscribeAllQuoteRequest(user_id, mode);
+	my_data->rc = apiProxyWrapper.SPAPI_SubscribeAllQuoteRequest(user_id, mode);
 }
 //1.49
 inline void SPAPI_GetAccInfo(MyUvShareData * my_data){
@@ -877,14 +877,14 @@ inline void SPAPI_AccountLogin(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
-	int rc = my_data->rc = apiProxyWrapper.SPAPI_AccountLogin(user_id,acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_AccountLogin(user_id,acc_no);
 }
 //1.55
 inline void SPAPI_AccountLogout(MyUvShareData * my_data){
 	json in=my_data->in;
 	COPY_TO_STR(in["user_id"],user_id);
 	COPY_TO_STR(in["acc_no"],acc_no);
-	int rc = my_data->rc = apiProxyWrapper.SPAPI_AccountLogout(user_id,acc_no);
+	my_data->rc = apiProxyWrapper.SPAPI_AccountLogout(user_id,acc_no);
 }
 //1.56
 inline void SPAPI_SendAccControl(MyUvShareData * my_data){
@@ -893,7 +893,7 @@ inline void SPAPI_SendAccControl(MyUvShareData * my_data){
 	COPY_TO_STR(in["acc_no"],acc_no);
 	char ctrl_mask=in["ctrl_mask"].get<char>();
 	char ctrl_level=in["ctrl_level"].get<char>();
-	int rc = my_data->rc = apiProxyWrapper.SPAPI_SendAccControl(user_id,acc_no,ctrl_mask,ctrl_level);
+	my_data->rc = apiProxyWrapper.SPAPI_SendAccControl(user_id,acc_no,ctrl_mask,ctrl_level);
 }
 #define DFN_FNC_PTR(aaa) BRACKET_WRAP(#aaa,aaa),
 std::map<std::string,void(*)(MyUvShareData*my_data)> _apiDict{
@@ -1011,7 +1011,8 @@ void after_worker_for_call(uv_work_t * req,int status){
 
 	json rst=my_data->rst;
 	rst["rc"]=my_data->rc;
-	if(0==my_data->rc) rst["STS"]="OK";//NOTES: few API return rc!=0 but OK, e.g. the -Count() for that case, missing STS doesn't not means KO....
+	if (my_data->rc<0) rst["STS"]="KO";
+	else rst["STS"]="OK";
 	v8::Local<v8::Value> argv[argc]={v8::JSON::Parse(v8::String::NewFromUtf8(isolate,rst.dump().c_str()))};
 	rst=NULL;
 
@@ -1077,7 +1078,9 @@ METHOD_START_ONCALL(_call){
 						v8::String::NewFromUtf8(isolate,req_data->out_s.c_str())
 						));
 			rc=req_data->rc;
-			if(0==rc){
+			if(rc<0){
+				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"KO"));
+			}else{
 				rt->Set(v8::String::NewFromUtf8(isolate,"STS"), v8::String::NewFromUtf8(isolate,"OK"));
 			}
 			req->data=NULL;

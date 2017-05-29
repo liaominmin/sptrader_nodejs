@@ -1,6 +1,6 @@
 //NOTES
 //the universal api server design by cmptech
-//USAGE:require('./cmp_api_server.js')();
+//USAGE:require('./cmp_api_server.js').daemon();
 
 var logger=console;//default logger
 var cmp_api_server;
@@ -14,8 +14,8 @@ module.exports=cmp_api_server={
 		if(!argo) argo=cmp_api_server.argv2o(process.argv);
 
 		process.env.UV_THREADPOOL_SIZE = argo.UV_THREADPOOL_SIZE || 126;//MAX=255, increase the thread pool for uv_queue_work()
+
 		logger.log(process.env);
-		//logger.log("__dirname=" + __dirname);
 		logger.log("process.versions=",process.versions);
 
 		if(!argo.app) throw new Error('-app is needed');
@@ -32,7 +32,7 @@ module.exports=cmp_api_server={
 		argo.http_server=http_server;//let the internal logic can access
 		http_server.listen(ppp,hhh,()=>{logger.log('web listen on ',hhh,':',ppp)});
 
-		////////////////////////////////////////////////////////// WebSocketServer Version (TODO)
+		////////////////////////////////////////////////////////// WebSocketServer Version (TODO fwd basic call to webserver above...)
 		var ws_port=argo.ws_port,ws_host=argo.ws_host||'0.0.0.0';
 		if(ws_port){
 			var _d_=logger.log;
@@ -90,7 +90,9 @@ module.exports=cmp_api_server={
 					}
 				});
 				_d_(" listen on "+ws_port);
-				argo.ws_server=ws_server;
+
+				argo.ws_server=ws_server;//websocket server hook
+
 				ws_server.listen(ws_port);
 			}catch(ex){
 				_d_("ws.ex=",ex);

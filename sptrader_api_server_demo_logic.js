@@ -47,6 +47,9 @@ module.exports = function(opts){
 			var rt={};
 			if(m){
 				try{
+					//this is 'SYNC' mode
+					rt=sptrader._call(o.m,o.p)||{};
+					/*
 					if('function'==typeof(sptrader[m])){
 						rt=sptrader[m].apply(sptrader,o.p)||{};
 					}else{
@@ -56,6 +59,7 @@ module.exports = function(opts){
 						rt.o=o;
 						rt.s=s;
 					}
+					*/
 				}catch(ex){
 					rt.exs=""+ex;
 					rt.errcode=999;

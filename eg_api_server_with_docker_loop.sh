@@ -26,6 +26,7 @@ do
 
 	#sleep 1
 
+	echo curl http://127.0.0.1:$port/ -d '{"m":"SPAPI_GetDllVersion"}'
 	sh ../sptrader_nodejs/run_api_server_with_docker.sh "-p$port:4444 -v$PWD:/sptrader_api_server" -server_id=$port -server_port=4444 -app=./sptrader_api_server_demo_logic.js 2>&1
 #| node handle_stdin_log.js $port.log
 done

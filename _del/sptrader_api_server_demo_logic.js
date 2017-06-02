@@ -14,10 +14,9 @@ module.exports = function(opts){
 		return require('../sptrader/SpTrader.'+plugver+'.node');
 	})();
 
-	sptrader._on('Test',function(rt){
+	sptrader.on('Test',function(rt){
 		logger.log("callback(Test)=>",rt);
 	});
-	logger.log(sptrader._call('SPAPI_GetDllVersion',{test:new Date()}));
 
 	var streamToString = function(stream, callback){
 		var str = '';
@@ -34,6 +33,7 @@ module.exports = function(opts){
 		})
 		;
 	};
+	logger.log(sptrader.call('SPAPI_GetDllVersion',{test:new Date()}));//SYNC TEST 2
 
 	//return the function that .createServer() needs:
 	return function(req,res){

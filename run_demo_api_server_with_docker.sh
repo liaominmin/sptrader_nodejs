@@ -14,5 +14,5 @@ echo run_api_server_with_docker.sh.date=`date`
 
 docker run -v"$PWD:/sptrader" -i -w/sptrader $1 \
 	cmptech/auto_ubuntuessential_nodejs_sharessl \
-	sh run_api_server_in_docker.sh $*
+	sh run_demo_api_server_in_docker.sh $*
 

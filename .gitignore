@@ -3,6 +3,7 @@ node-v7.8.0
 Log
 product
 *.log
+*.lck
 node_modules/*
 core
 tmp

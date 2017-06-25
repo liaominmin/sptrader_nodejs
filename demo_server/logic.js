@@ -65,8 +65,14 @@ module.exports=function(Application){
 				avatar._on(o=>{setTimeout(()=>{_callback_for_on(o)},2);});
 				return avatar;
 			})() || (()=>{throw new Error('sptrader not found?')})() ;
+
 			remoteModule.on('Test',function(rt){
 				logger.log("remoteModule.callback(Test)=>",rt);
+			});
+
+			//for minmin to check
+			remoteModule.on('ApiTickerUpdate',function(rt){
+				logger.log("remoteModule.ApiTickerUpdate(Test)=>",rt);
 			});
 
 			Q_remoteModule=Q(remoteModule);

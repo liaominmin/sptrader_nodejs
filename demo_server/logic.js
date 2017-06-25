@@ -88,6 +88,30 @@ module.exports=function(Application){
 		return remoteModule;
 	}
 
+	function Quit_Promise(param){
+		var rt={STS:"OK",errmsg:"Will Quit Server("+server_id+") after 1 sec, please try reconnect later about 10 seconds for init."};
+		setTimeout(()=>{
+			Application.quit();
+		},333);
+		return Q(rt);
+	}
+
+	function SuperQuit_Promise(param){
+		Application.persist('auto_login_flag',false);
+		return Quit_Promise(param);
+	}
+
+	function Ping_Promise(p){//throw new Error("testing");
+		var ping=null;
+		if(p && p.ping) ping=p.ping;
+		var rt={STS:"OK"};
+		rt.pong = new Date();
+		if(ping){
+			rt.ping=ping;
+			rt.diff = (rt.pong.getTime() - (new Date(ping)).getTime())/1000;
+		}
+		return Q(rt);
+	}
 	//SIGINT
 	function handleSIGINT(){
 		Quit_Promise().done(()=>{
@@ -122,7 +146,7 @@ module.exports=function(Application){
 	var rt={
 		Quit_Promise,
 		SuperQuit_Promise,
-		Health_Promise,
+		//Health_Promise,
 		Ping_Promise,
 
 		handleSIGINT,

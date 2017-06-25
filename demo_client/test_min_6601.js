@@ -12,13 +12,13 @@ var SpWrapper=function(opts){
 			.then(rst=>{
 				var rt={STS:'KO'};
 				var body=rst.body;
-				rt.s=body;
 				if(rst){
 					if(body){
 						var o=s2o(body);
 						if(o){
 							if(o.STS){
 								rt=o;
+								return Q(rt);
 							}else{
 								if(o.errmsg){
 									rt.errmsg=o.errmsg;
@@ -31,11 +31,15 @@ var SpWrapper=function(opts){
 						}else{
 							rt.errmsg=body;
 						}
+					}else{
+						if(rst.errmsg)rt.errmsg=rst.errmsg;
+						else rt.errmsg=o2s(rst);
 					}
 				}else{
 					rt.errmsg='no reply?'
 				}
-				return rt;
+				//logger.log('reject with ',rst);
+				return Q.reject(rt);
 			});
 	}
 };
@@ -52,8 +56,8 @@ var app_id="SPDEMO";
 
 const Q=require('q');
 var QSP=new SpWrapper({
-	url:'http://sptrader.cc:6601',//old tmp
-	//url:'http://localhost:6601',
+	//url:'http://sptrader.cc:6601',//old tmp
+	url:'http://localhost:6601',
 	//cookie_pack:'mytest6601'//id for cookie pack
 });
 
@@ -66,6 +70,7 @@ function TryLogin(try_time/*TODO*/){
 			if(rst&&rst.rc==3){
 				return Q({STS:'OK'});//是登陆状态.
 			}else{
+				logger.log('try login again....');
 				Q(QSP)	
 					.invoke('remote','SPAPI_SetLoginInfo',{user_id,host_id,host,port,password,license,app_id})
 					.then(rst=>{
@@ -89,11 +94,11 @@ function TryLogin(try_time/*TODO*/){
 					.delay(3333)//let login completed
 					.invoke('remote','SPAPI_GetLoginStatus',{user_id,host_id})
 					.then(rst=>{
-						if(debug>1) logger.log('SPAPI_GetLoginStatus.rst=',rst);
+						if(debug>0) logger.log('SPAPI_GetLoginStatus.rst=',rst);
 						if(rst&&rst.rc==3){
 							return Q({STS:'OK'});//是登陆状态.
 						}else{
-							return Q.reject({STS:'KO',errmsg:'fail try login again?'});
+							return Q.reject({STS:'KO',errmsg:'try login again failed?'});
 						}
 					})
 				;
@@ -115,7 +120,7 @@ function GetProducts(rst_prev){
 	return Q(QSP).invoke('remote','SPAPI_LoadInstrumentList')
 		.then(rst=>{
 			if(rst&&(rst.rc==0||rst.rc==1)){
-				if(rst.rc==0) return Q.delay(3333).then(()=>{return QSP});//let it complete
+				if(rst.rc==0) return Q.delay(6666).then(()=>{return QSP});//let it complete
 				/* TODO do later if for other products
 					for (var i in rst.out){
 						var inst_code = rst.out[i].InstCode;
@@ -134,7 +139,7 @@ function GetProducts(rst_prev){
 		.invoke('remote','SPAPI_LoadProductInfoListByCode',{inst_code})
 		.then(rst=>{
 			if(rst&&(rst.rc==0||rst.rc==1)){
-				if(rst.rc==0) return Q.delay(3333).then(()=>{return QSP});//let it complete
+				if(rst.rc==0) return Q.delay(6666).then(()=>{return QSP});//let it complete
 				return QSP;
 			}else{
 				logger.log(rst)

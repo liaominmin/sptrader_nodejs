@@ -14,9 +14,10 @@ module.exports = function(opts){
 		return require('../sptrader/SpTrader.'+plugver+'.node');
 	})();
 
-	sptrader.on('Test',function(rt){
+	sptrader._on('Test',function(rt){
 		logger.log("callback(Test)=>",rt);
 	});
+	logger.log(sptrader._call('SPAPI_GetDllVersion',{test:new Date()}));
 
 	var streamToString = function(stream, callback){
 		var str = '';
@@ -33,7 +34,6 @@ module.exports = function(opts){
 		})
 		;
 	};
-	logger.log(sptrader.call('SPAPI_GetDllVersion',{test:new Date()}));//SYNC TEST 2
 
 	//return the function that .createServer() needs:
 	return function(req,res){
@@ -47,6 +47,9 @@ module.exports = function(opts){
 			var rt={};
 			if(m){
 				try{
+					//this is 'SYNC' mode
+					rt=sptrader._call(o.m,o.p)||{};
+					/*
 					if('function'==typeof(sptrader[m])){
 						rt=sptrader[m].apply(sptrader,o.p)||{};
 					}else{
@@ -56,6 +59,7 @@ module.exports = function(opts){
 						rt.o=o;
 						rt.s=s;
 					}
+					*/
 				}catch(ex){
 					rt.exs=""+ex;
 					rt.errcode=999;
